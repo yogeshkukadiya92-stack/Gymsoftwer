@@ -24,7 +24,7 @@ export function SignInForm() {
       body: JSON.stringify({ email, password }),
     });
 
-    const payload = (await response.json()) as { error?: string };
+    const payload = (await response.json()) as { error?: string; redirectTo?: string };
 
     if (!response.ok) {
       setError(payload.error ?? "Login failed.");
@@ -32,7 +32,7 @@ export function SignInForm() {
       return;
     }
 
-    router.push("/admin");
+    router.push(payload.redirectTo ?? "/admin");
     router.refresh();
   }
 
@@ -43,7 +43,7 @@ export function SignInForm() {
       </p>
       <h1 className="mt-4 font-serif text-4xl">Sign in to admin panel</h1>
       <p className="mt-4 text-slate-300">
-        Use the configured admin email and password to access the dashboard.
+        Sign in with your GymFlow account to access the correct role-based dashboard.
       </p>
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         <label className="block">
@@ -89,6 +89,12 @@ export function SignInForm() {
           </Link>
         </div>
       </div>
+      <p className="mt-6 text-sm text-slate-400">
+        New member?{" "}
+        <Link href="/sign-up" className="font-semibold text-orange-200">
+          Create account
+        </Link>
+      </p>
     </div>
   );
 }

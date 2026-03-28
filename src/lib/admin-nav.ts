@@ -5,6 +5,7 @@ export const adminNavLinks = [
   { href: "/admin/progress", label: "Progress" },
   { href: "/admin/reminders", label: "Reminders" },
   { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/users", label: "Users" },
   { href: "/admin/attendance", label: "Attendance" },
   { href: "/admin/form-responses", label: "Form responses" },
   { href: "/admin/exercises", label: "Exercise library" },

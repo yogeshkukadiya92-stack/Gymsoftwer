@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 
 import { adminSessionCookie, isValidAdminLogin } from "@/lib/auth";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -13,6 +15,40 @@ export async function POST(request: Request) {
       { error: "Email and password are required." },
       { status: 400 },
     );
+  }
+
+  if (hasSupabaseEnv) {
+    const supabase = await createSupabaseServerClient();
+
+    if (!supabase) {
+      return Response.json({ error: "Supabase client unavailable." }, { status: 500 });
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: body.email,
+      password: body.password,
+    });
+
+    if (error) {
+      return Response.json({ error: error.message }, { status: 401 });
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("email", user?.email ?? "")
+      .single();
+
+    const redirectTo = profile?.role === "admin" ? "/admin" : "/member";
+
+    return Response.json({
+      message: "Login successful.",
+      redirectTo,
+    });
   }
 
   if (!isValidAdminLogin(body.email, body.password)) {
@@ -33,5 +69,6 @@ export async function POST(request: Request) {
 
   return Response.json({
     message: "Login successful.",
+    redirectTo: "/admin",
   });
 }
