@@ -5,6 +5,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Profile, UserRole } from "@/lib/types";
+import type { ImportedUserRow } from "@/lib/excel";
 
 export const adminSessionCookie = "gymflow_admin_session";
 
@@ -176,6 +177,26 @@ async function findAuthUserByEmail(email: string) {
   );
 }
 
+async function findProfileByEmail(email: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
 export async function updateManagedUser(input: {
   id: string;
   currentEmail: string;
@@ -253,4 +274,51 @@ export async function deleteManagedUser(input: { id: string; email: string }) {
   }
 
   return { id: input.id };
+}
+
+export async function importManagedUsers(rows: ImportedUserRow[]) {
+  const imported: Array<{ id: string; email: string; role: UserRole }> = [];
+  const updated: Array<{ id: string; email: string; role: UserRole }> = [];
+
+  for (const row of rows) {
+    const lookupEmail = row.currentEmail || row.email;
+    const existingAuthUser = lookupEmail ? await findAuthUserByEmail(lookupEmail) : null;
+    const existingProfile = lookupEmail ? await findProfileByEmail(lookupEmail) : null;
+
+    if (!existingAuthUser && !row.password.trim()) {
+      throw new Error(`Password is required for new user ${row.email}.`);
+    }
+
+    if (row.id || existingAuthUser || row.currentEmail.trim() || existingProfile?.id) {
+      const user = await updateManagedUser({
+        id: row.id || String(existingProfile?.id ?? ""),
+        currentEmail: lookupEmail,
+        fullName: row.fullName,
+        email: row.email,
+        password: row.password,
+        role: row.role,
+        phone: row.phone,
+        fitnessGoal: row.fitnessGoal,
+        branch: row.branch,
+      });
+      updated.push(user);
+      continue;
+    }
+
+    const user = await createManagedUser({
+      fullName: row.fullName,
+      email: row.email,
+      password: row.password,
+      role: row.role,
+      phone: row.phone,
+      fitnessGoal: row.fitnessGoal,
+      branch: row.branch,
+    });
+    imported.push(user);
+  }
+
+  return {
+    imported,
+    updated,
+  };
 }

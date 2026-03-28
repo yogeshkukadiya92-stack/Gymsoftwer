@@ -1,6 +1,14 @@
 import * as XLSX from "xlsx";
 
-import { AppData, Attendance, ClassSession, InventoryItem, InventorySale, Profile } from "@/lib/types";
+import {
+  AppData,
+  Attendance,
+  ClassSession,
+  InventoryItem,
+  InventorySale,
+  Profile,
+  UserRole,
+} from "@/lib/types";
 
 const workbookSheetOrder = [
   "profiles",
@@ -20,6 +28,19 @@ type SheetName = (typeof workbookSheetOrder)[number];
 type ImportSummary = {
   sheet: SheetName;
   rows: number;
+};
+
+export type ImportedUserRow = {
+  id: string;
+  currentEmail: string;
+  fullName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  phone: string;
+  fitnessGoal: string;
+  branch: string;
+  joinedOn: string;
 };
 
 function toJsonSheet<T extends Record<string, unknown>>(rows: T[]) {
@@ -294,6 +315,76 @@ export function buildMembersTemplateWorkbook() {
   return workbook;
 }
 
+export function buildUsersWorkbook(profiles: Profile[]) {
+  const workbook = XLSX.utils.book_new();
+
+  const userRows = profiles.map((profile) => ({
+    id: profile.id,
+    current_email: profile.email,
+    full_name: profile.fullName,
+    email: profile.email,
+    password: "",
+    role: profile.role,
+    phone: profile.phone,
+    fitness_goal: profile.fitnessGoal,
+    branch: profile.branch,
+    joined_on: profile.joinedOn,
+  }));
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(userRows), "users");
+
+  return workbook;
+}
+
+export function buildUsersTemplateWorkbook() {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet([
+      {
+        id: "",
+        current_email: "",
+        full_name: "Admin User",
+        email: "admin@example.com",
+        password: "TempPass123.",
+        role: "admin",
+        phone: "+91 98765 00000",
+        fitness_goal: "Operations oversight",
+        branch: "Main Branch",
+        joined_on: "2026-03-28",
+      },
+      {
+        id: "",
+        current_email: "",
+        full_name: "Trainer User",
+        email: "trainer@example.com",
+        password: "TrainerPass123.",
+        role: "trainer",
+        phone: "+91 98765 11111",
+        fitness_goal: "Coach performance",
+        branch: "Main Branch",
+        joined_on: "2026-03-28",
+      },
+      {
+        id: "",
+        current_email: "",
+        full_name: "Member User",
+        email: "member@example.com",
+        password: "MemberPass123.",
+        role: "member",
+        phone: "+91 98765 22222",
+        fitness_goal: "Weight loss",
+        branch: "Main Branch",
+        joined_on: "2026-03-28",
+      },
+    ]),
+    "users",
+  );
+
+  return workbook;
+}
+
 export function buildInventoryWorkbook(
   items: InventoryItem[],
   sales: InventorySale[],
@@ -423,6 +514,56 @@ export function parseMembersWorkbook(buffer: ArrayBuffer) {
   return {
     members,
     summary: [{ sheet: "profiles", rows: members.length }],
+    duplicateEmails: duplicateEmails.map((item) => item.email),
+  };
+}
+
+export function parseUsersWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+
+  if (!workbook.SheetNames.includes("users")) {
+    throw new Error("Missing sheet: users. Please use the users template file.");
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets.users, {
+    defval: "",
+  });
+
+  const users = rows.map((row) => {
+    const item = normalizeKeys(row);
+    const roleValue = (toStringValue(item.role) || "member").toLowerCase();
+    const role = ["member", "trainer", "admin"].includes(roleValue)
+      ? (roleValue as UserRole)
+      : "member";
+
+    return {
+      id: toStringValue(item.id),
+      currentEmail: toStringValue(item.current_email),
+      fullName: toStringValue(item.full_name),
+      email: toStringValue(item.email),
+      password: toStringValue(item.password),
+      role,
+      phone: toStringValue(item.phone),
+      fitnessGoal: toStringValue(item.fitness_goal),
+      branch: toStringValue(item.branch),
+      joinedOn: toStringValue(item.joined_on),
+    } satisfies ImportedUserRow;
+  });
+
+  const missingRequired = users.filter((user) => !user.fullName || !user.email || !user.role);
+
+  if (missingRequired.length > 0) {
+    throw new Error("Some user rows are missing required values. full_name, email, and role are required.");
+  }
+
+  const duplicateEmails = users.filter(
+    (user, index) =>
+      users.findIndex((item) => item.email.toLowerCase() === user.email.toLowerCase()) !== index,
+  );
+
+  return {
+    users,
+    summary: [{ sheet: "profiles" as const, rows: users.length }],
     duplicateEmails: duplicateEmails.map((item) => item.email),
   };
 }
