@@ -14,11 +14,12 @@ const navLinks = [
 export default async function MemberDashboardPage() {
   const { viewer, assignedPlan, membershipStatus, completedSessions, bookedClasses } =
     await getDashboardData("member");
+  const firstName = viewer.fullName?.split(" ")[0] || "Member";
 
   return (
     <AppShell
       role="member"
-      title={`Welcome back, ${viewer.fullName.split(" ")[0]}`}
+      title={`Welcome back, ${firstName}`}
       subtitle="Track training, stay on schedule, and keep your gym membership details close at hand."
       navLinks={navLinks}
     >

@@ -11,6 +11,12 @@ import {
   starterForms,
   starterResponses,
 } from "@/lib/forms";
+import {
+  createSupabaseForm,
+  createSupabaseFormResponse,
+  getSupabaseFormsStore,
+  updateSupabaseForm,
+} from "@/lib/supabase/persistence";
 
 const dataDirectory = path.join(process.cwd(), "data");
 const storePath = path.join(dataDirectory, "forms-store.json");
@@ -42,25 +48,32 @@ async function writeStore(store: FormsStore) {
 }
 
 export async function getFormsStore() {
-  return readStore();
+  const supabaseStore = await getSupabaseFormsStore();
+  return supabaseStore ?? readStore();
 }
 
 export async function getAllForms() {
-  const store = await readStore();
+  const store = await getFormsStore();
   return store.forms;
 }
 
 export async function getAllFormResponses() {
-  const store = await readStore();
+  const store = await getFormsStore();
   return store.responses;
 }
 
 export async function getFormBySlug(slug: string) {
-  const store = await readStore();
+  const store = await getFormsStore();
   return store.forms.find((form) => form.slug === slug) ?? null;
 }
 
 export async function createIntakeForm(input: NewIntakeFormInput) {
+  const supabaseForm = await createSupabaseForm(input);
+
+  if (supabaseForm) {
+    return supabaseForm;
+  }
+
   const store = await readStore();
   const baseSlug = slugifyFormTitle(input.title);
   const existingSlugs = new Set(store.forms.map((form) => form.slug));
@@ -97,6 +110,12 @@ export async function createIntakeForm(input: NewIntakeFormInput) {
 }
 
 export async function updateIntakeForm(formId: string, input: NewIntakeFormInput) {
+  const supabaseForm = await updateSupabaseForm(formId, input);
+
+  if (supabaseForm) {
+    return supabaseForm;
+  }
+
   const store = await readStore();
   const existing = store.forms.find((form) => form.id === formId);
 
@@ -145,6 +164,12 @@ export async function createFormResponse(
   formId: string,
   answers: Record<string, string>,
 ) {
+  const supabaseResponse = await createSupabaseFormResponse(formId, answers);
+
+  if (supabaseResponse) {
+    return supabaseResponse;
+  }
+
   const store = await readStore();
 
   const response: IntakeFormResponse = {

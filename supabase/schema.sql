@@ -15,7 +15,27 @@ create table if not exists memberships (
   plan_name text not null,
   status text not null check (status in ('Active', 'Expiring Soon', 'On Hold')),
   start_date date not null,
-  renewal_date date not null
+  renewal_date date not null,
+  billing_cycle text check (billing_cycle in ('Monthly', 'Quarterly', 'Yearly')),
+  amount_inr numeric default 0,
+  payment_status text check (payment_status in ('Paid', 'Pending', 'Overdue', 'Partially Paid')),
+  last_payment_date date,
+  next_invoice_date date,
+  payment_method text check (payment_method in ('UPI', 'Cash', 'Bank Transfer', 'Card')),
+  outstanding_amount_inr numeric default 0
+);
+
+create table if not exists invoices (
+  id text primary key,
+  membership_id text not null references memberships(id) on delete cascade,
+  member_id text not null references profiles(id) on delete cascade,
+  invoice_number text not null,
+  issued_on date not null,
+  due_on date not null,
+  amount_inr numeric not null default 0,
+  status text not null check (status in ('Paid', 'Pending', 'Overdue', 'Partially Paid')),
+  paid_on date,
+  payment_method text check (payment_method in ('UPI', 'Cash', 'Bank Transfer', 'Card'))
 );
 
 create table if not exists exercises (
@@ -83,4 +103,73 @@ create table if not exists attendance (
   session_id text not null references classes_or_sessions(id) on delete cascade,
   member_id text not null references profiles(id) on delete cascade,
   status text not null check (status in ('Booked', 'Checked In', 'Missed'))
+);
+
+create table if not exists progress_check_ins (
+  id text primary key,
+  member_id text not null references profiles(id) on delete cascade,
+  recorded_on date not null,
+  weight_kg numeric not null default 0,
+  waist_cm numeric not null default 0,
+  hips_cm numeric not null default 0,
+  chest_cm numeric not null default 0,
+  thigh_cm numeric not null default 0,
+  coach_note text not null default '',
+  energy_level text not null check (energy_level in ('Low', 'Medium', 'High'))
+);
+
+create table if not exists progress_photos (
+  id text primary key,
+  member_id text not null references profiles(id) on delete cascade,
+  recorded_on date not null,
+  label text not null,
+  image_url text not null,
+  note text not null default ''
+);
+
+create table if not exists inventory_items (
+  id text primary key,
+  name text not null,
+  category text not null,
+  supplement_type text,
+  brand text not null default '',
+  flavor text not null default '',
+  supplier_name text not null default '',
+  sku text not null unique,
+  batch_code text not null default '',
+  unit_size text not null default '',
+  expiry_date date,
+  stock_units integer not null default 0,
+  reorder_level integer not null default 0,
+  cost_price_inr numeric not null default 0,
+  selling_price_inr numeric not null default 0,
+  status text not null check (status in ('In Stock', 'Low Stock', 'Out of Stock'))
+);
+
+create table if not exists inventory_sales (
+  id text primary key,
+  item_id text not null references inventory_items(id) on delete cascade,
+  sold_on date not null,
+  quantity integer not null default 1,
+  total_amount_inr numeric not null default 0,
+  customer_name text not null default '',
+  payment_method text not null check (payment_method in ('UPI', 'Cash', 'Bank Transfer', 'Card'))
+);
+
+create table if not exists intake_forms (
+  id text primary key,
+  slug text not null unique,
+  title text not null,
+  description text not null default '',
+  audience text not null default '',
+  status text not null check (status in ('Active', 'Draft')),
+  fields jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists intake_form_responses (
+  id text primary key,
+  form_id text not null references intake_forms(id) on delete cascade,
+  submitted_at timestamptz not null default now(),
+  answers jsonb not null default '{}'::jsonb
 );

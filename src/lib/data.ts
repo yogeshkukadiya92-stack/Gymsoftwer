@@ -1,8 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { mockData } from "@/lib/mock-data";
 import { readAppDataStore } from "@/lib/app-data-store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AppData, Exercise, Profile, UserRole, WorkoutPlan } from "@/lib/types";
+import { readSupabaseAppData } from "@/lib/supabase/persistence";
+import { AppData, Profile, UserRole, WorkoutPlan } from "@/lib/types";
 
 type DashboardData = {
   data: AppData;
@@ -15,66 +15,21 @@ type DashboardData = {
   activePlans: number;
 };
 
-async function fetchSupabaseData(): Promise<AppData | null> {
-  const supabase = await createSupabaseServerClient();
-
-  if (!supabase) {
-    return null;
-  }
-
-  const [
-    profiles,
-    memberships,
-    exercises,
-    workoutPlans,
-    assignments,
-    workoutLogs,
-    sessions,
-    attendance,
-  ] = await Promise.all([
-    supabase.from("profiles").select("*"),
-    supabase.from("memberships").select("*"),
-    supabase.from("exercises").select("*"),
-    supabase.from("workout_plans").select("*, exercises:workout_plan_exercises(*)"),
-    supabase.from("member_workout_assignments").select("*"),
-    supabase.from("workout_logs").select("*"),
-    supabase.from("classes_or_sessions").select("*"),
-    supabase.from("attendance").select("*"),
-  ]);
-
-  const results = [
-    profiles,
-    memberships,
-    exercises,
-    workoutPlans,
-    assignments,
-    workoutLogs,
-    sessions,
-    attendance,
-  ];
-
-  if (results.some((result) => result.error)) {
-    return null;
-  }
-
+function buildFallbackViewer(role: UserRole): Profile {
   return {
-    profiles: (profiles.data ?? []) as AppData["profiles"],
-    memberships: (memberships.data ?? []) as AppData["memberships"],
-    invoices: [],
-    inventoryItems: [],
-    inventorySales: [],
-    exercises: (exercises.data ?? []) as Exercise[],
-    workoutPlans: (workoutPlans.data ?? []).map((plan) => ({
-      ...plan,
-      exercises: plan.exercises ?? [],
-    })) as WorkoutPlan[],
-    assignments: (assignments.data ?? []) as AppData["assignments"],
-    workoutLogs: (workoutLogs.data ?? []) as AppData["workoutLogs"],
-    progressCheckIns: [],
-    progressPhotos: [],
-    sessions: (sessions.data ?? []) as AppData["sessions"],
-    attendance: (attendance.data ?? []) as AppData["attendance"],
+    id: `${role}-fallback`,
+    fullName: role === "admin" ? "Admin User" : role === "trainer" ? "Trainer User" : "Member User",
+    email: "",
+    phone: "",
+    role,
+    fitnessGoal: "",
+    branch: "",
+    joinedOn: new Date().toISOString().slice(0, 10),
   };
+}
+
+async function fetchSupabaseData(): Promise<AppData | null> {
+  return readSupabaseAppData();
 }
 
 export async function getAppData() {
@@ -96,7 +51,9 @@ export async function getAppData() {
 export async function getDashboardData(role: UserRole): Promise<DashboardData> {
   const data = await getAppData();
   const viewer =
-    data.profiles.find((profile) => profile.role === role) ?? data.profiles[0];
+    data.profiles.find((profile) => profile.role === role) ??
+    data.profiles[0] ??
+    buildFallbackViewer(role);
 
   const membership = data.memberships.find(
     (item) => item.memberId === viewer.id,

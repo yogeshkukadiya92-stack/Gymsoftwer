@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { addProgressPhoto } from "@/lib/app-data-store";
+import { uploadProgressPhotoToSupabaseStorage } from "@/lib/supabase/storage";
 
 function sanitizeFileName(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -30,23 +31,28 @@ export async function POST(request: Request) {
     return Response.json({ error: "Only image uploads are allowed." }, { status: 400 });
   }
 
-  const uploadsDirectory = path.join(process.cwd(), "public", "uploads", "progress");
-  await mkdir(uploadsDirectory, { recursive: true });
+  let imageUrl = await uploadProgressPhotoToSupabaseStorage(file);
 
-  const extension = path.extname(file.name) || ".jpg";
-  const baseName = sanitizeFileName(path.basename(file.name, extension));
-  const nextFileName = `${Date.now()}-${baseName}${extension}`;
-  const nextFilePath = path.join(uploadsDirectory, nextFileName);
-  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!imageUrl) {
+    const uploadsDirectory = path.join(process.cwd(), "public", "uploads", "progress");
+    await mkdir(uploadsDirectory, { recursive: true });
 
-  await writeFile(nextFilePath, buffer);
+    const extension = path.extname(file.name) || ".jpg";
+    const baseName = sanitizeFileName(path.basename(file.name, extension));
+    const nextFileName = `${Date.now()}-${baseName}${extension}`;
+    const nextFilePath = path.join(uploadsDirectory, nextFileName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await writeFile(nextFilePath, buffer);
+    imageUrl = `/uploads/progress/${nextFileName}`;
+  }
 
   const photo = await addProgressPhoto({
     memberId,
     recordedOn,
     label,
     note,
-    imageUrl: `/uploads/progress/${nextFileName}`,
+    imageUrl,
   });
 
   return Response.json({

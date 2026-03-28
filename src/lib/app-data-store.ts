@@ -3,6 +3,16 @@ import path from "node:path";
 
 import { mockData } from "@/lib/mock-data";
 import {
+  insertSupabaseInventoryItem,
+  insertSupabaseProgressCheckIn,
+  insertSupabaseProgressPhoto,
+  recordSupabaseInventorySale,
+  restockSupabaseInventoryItem,
+  upsertSupabaseInventoryItems,
+  upsertSupabaseProfiles,
+  updateSupabaseProgressCheckIn,
+} from "@/lib/supabase/persistence";
+import {
   AppData,
   InventoryItem,
   InventorySale,
@@ -55,6 +65,16 @@ export async function writeAppDataStore(data: AppData) {
 }
 
 export async function importMembersToAppData(members: Profile[]) {
+  const supabaseResult = await upsertSupabaseProfiles(members);
+
+  if (supabaseResult) {
+    return {
+      imported: supabaseResult.imported,
+      updated: supabaseResult.updated,
+      totalProfiles: supabaseResult.imported.length,
+    };
+  }
+
   const store = await readAppDataStore();
   const existingProfiles = [...store.profiles];
   const imported: Profile[] = [];
@@ -106,6 +126,12 @@ type ProgressCheckInInput = Omit<ProgressCheckIn, "id">;
 type ProgressPhotoInput = Omit<ProgressPhoto, "id">;
 
 export async function createProgressCheckIn(input: ProgressCheckInInput) {
+  const supabaseEntry = await insertSupabaseProgressCheckIn(input);
+
+  if (supabaseEntry) {
+    return supabaseEntry;
+  }
+
   const store = await readAppDataStore();
   const nextEntry: ProgressCheckIn = {
     id: `progress-${crypto.randomUUID()}`,
@@ -126,6 +152,12 @@ export async function updateProgressCheckIn(
   id: string,
   input: ProgressCheckInInput,
 ) {
+  const supabaseEntry = await updateSupabaseProgressCheckIn(id, input);
+
+  if (supabaseEntry) {
+    return supabaseEntry;
+  }
+
   const store = await readAppDataStore();
   const existing = store.progressCheckIns.find((entry) => entry.id === id);
 
@@ -152,6 +184,12 @@ export async function updateProgressCheckIn(
 }
 
 export async function addProgressPhoto(input: ProgressPhotoInput) {
+  const supabasePhoto = await insertSupabaseProgressPhoto(input);
+
+  if (supabasePhoto) {
+    return supabasePhoto;
+  }
+
   const store = await readAppDataStore();
   const nextPhoto: ProgressPhoto = {
     id: `photo-${crypto.randomUUID()}`,
@@ -183,6 +221,12 @@ function getInventoryStatus(stockUnits: number, reorderLevel: number) {
 }
 
 export async function createInventoryItem(input: InventoryItemInput) {
+  const supabaseItem = await insertSupabaseInventoryItem(input);
+
+  if (supabaseItem) {
+    return supabaseItem;
+  }
+
   const store = await readAppDataStore();
   const item: InventoryItem = {
     id: `inventory-${crypto.randomUUID()}`,
@@ -203,6 +247,12 @@ export async function createInventoryItem(input: InventoryItemInput) {
 type InventorySaleInput = Omit<InventorySale, "id" | "totalAmountInr">;
 
 export async function recordInventorySale(input: InventorySaleInput) {
+  const supabaseSale = await recordSupabaseInventorySale(input);
+
+  if (supabaseSale) {
+    return supabaseSale;
+  }
+
   const store = await readAppDataStore();
   const item = store.inventoryItems.find((entry) => entry.id === input.itemId);
 
@@ -245,6 +295,12 @@ export async function recordInventorySale(input: InventorySaleInput) {
 }
 
 export async function restockInventoryItem(itemId: string, quantity: number) {
+  const supabaseItem = await restockSupabaseInventoryItem(itemId, quantity);
+
+  if (supabaseItem) {
+    return supabaseItem;
+  }
+
   const store = await readAppDataStore();
   const item = store.inventoryItems.find((entry) => entry.id === itemId);
 
@@ -276,6 +332,16 @@ export async function restockInventoryItem(itemId: string, quantity: number) {
 }
 
 export async function importInventoryItemsToAppData(items: InventoryItem[]) {
+  const supabaseItems = await upsertSupabaseInventoryItems(items);
+
+  if (supabaseItems) {
+    return {
+      imported: supabaseItems,
+      updated: [],
+      totalItems: supabaseItems.length,
+    };
+  }
+
   const store = await readAppDataStore();
   const existingItems = [...store.inventoryItems];
   const imported: InventoryItem[] = [];
