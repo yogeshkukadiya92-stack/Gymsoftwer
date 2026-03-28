@@ -25,7 +25,7 @@ export const mockData: AppData = {
     {
       id: "admin-1",
       fullName: "Yogesh Kukadiya",
-      email: "yogeshkukadiya92@gmail.com",
+      email: "yogeshkukadiya92@gmail.con",
       phone: "+91 98765 44444",
       role: "admin",
       fitnessGoal: "Operations oversight",

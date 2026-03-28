@@ -30,13 +30,9 @@ export async function hasAdminSession() {
 }
 
 export async function getAuthenticatedProfile() {
-  if (!hasSupabaseEnv) {
-    const hasFallbackAdmin = await hasAdminSession();
+  const hasFallbackAdmin = await hasAdminSession();
 
-    if (!hasFallbackAdmin) {
-      return null;
-    }
-
+  if (hasFallbackAdmin) {
     return {
       id: "admin-fallback",
       fullName: "Admin User",
@@ -47,6 +43,14 @@ export async function getAuthenticatedProfile() {
       branch: "",
       joinedOn: new Date().toISOString().slice(0, 10),
     } satisfies Profile;
+  }
+
+  if (!hasSupabaseEnv) {
+    if (!hasFallbackAdmin) {
+      return null;
+    }
+
+    return null;
   }
 
   const supabase = await createSupabaseServerClient();
@@ -96,14 +100,14 @@ export async function requireRole(role: UserRole) {
 }
 
 export async function signOutCurrentSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(adminSessionCookie);
+
   if (hasSupabaseEnv) {
     const supabase = await createSupabaseServerClient();
     await supabase?.auth.signOut();
     return;
   }
-
-  const cookieStore = await cookies();
-  cookieStore.delete(adminSessionCookie);
 }
 
 export async function createManagedUser(input: {

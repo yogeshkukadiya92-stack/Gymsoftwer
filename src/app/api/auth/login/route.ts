@@ -17,6 +17,22 @@ export async function POST(request: Request) {
     );
   }
 
+  if (isValidAdminLogin(body.email, body.password)) {
+    const cookieStore = await cookies();
+    cookieStore.set(adminSessionCookie, "authenticated", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return Response.json({
+      message: "Login successful.",
+      redirectTo: "/admin",
+    });
+  }
+
   if (hasSupabaseEnv) {
     const supabase = await createSupabaseServerClient();
 
@@ -51,24 +67,8 @@ export async function POST(request: Request) {
     });
   }
 
-  if (!isValidAdminLogin(body.email, body.password)) {
-    return Response.json(
-      { error: "Invalid login credentials." },
-      { status: 401 },
-    );
-  }
-
-  const cookieStore = await cookies();
-  cookieStore.set(adminSessionCookie, "authenticated", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  return Response.json({
-    message: "Login successful.",
-    redirectTo: "/admin",
-  });
+  return Response.json(
+    { error: "Invalid login credentials." },
+    { status: 401 },
+  );
 }
