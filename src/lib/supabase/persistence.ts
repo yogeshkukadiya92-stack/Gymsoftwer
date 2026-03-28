@@ -37,6 +37,192 @@ function mapFormRow(row: {
   };
 }
 
+function mapProfileRow(row: Record<string, unknown>): Profile {
+  return {
+    id: String(row.id ?? ""),
+    fullName: String(row.full_name ?? ""),
+    email: String(row.email ?? ""),
+    phone: String(row.phone ?? ""),
+    role: (row.role ?? "member") as Profile["role"],
+    fitnessGoal: String(row.fitness_goal ?? ""),
+    branch: String(row.branch ?? ""),
+    joinedOn: String(row.joined_on ?? ""),
+  };
+}
+
+function mapMembershipRow(row: Record<string, unknown>): AppData["memberships"][number] {
+  return {
+    id: String(row.id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    planName: String(row.plan_name ?? ""),
+    status: (row.status ?? "Active") as AppData["memberships"][number]["status"],
+    startDate: String(row.start_date ?? ""),
+    renewalDate: String(row.renewal_date ?? ""),
+    billingCycle: (row.billing_cycle ?? "Monthly") as AppData["memberships"][number]["billingCycle"],
+    amountInr: Number(row.amount_inr ?? 0),
+    paymentStatus: (row.payment_status ?? "Pending") as AppData["memberships"][number]["paymentStatus"],
+    lastPaymentDate: String(row.last_payment_date ?? ""),
+    nextInvoiceDate: String(row.next_invoice_date ?? ""),
+    paymentMethod: (row.payment_method ?? "Cash") as AppData["memberships"][number]["paymentMethod"],
+    outstandingAmountInr: Number(row.outstanding_amount_inr ?? 0),
+  };
+}
+
+function mapInvoiceRow(row: Record<string, unknown>): AppData["invoices"][number] {
+  return {
+    id: String(row.id ?? ""),
+    membershipId: String(row.membership_id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    invoiceNumber: String(row.invoice_number ?? ""),
+    issuedOn: String(row.issued_on ?? ""),
+    dueOn: String(row.due_on ?? ""),
+    amountInr: Number(row.amount_inr ?? 0),
+    status: (row.status ?? "Pending") as AppData["invoices"][number]["status"],
+    paidOn: row.paid_on ? String(row.paid_on) : undefined,
+    paymentMethod: row.payment_method
+      ? (row.payment_method as AppData["invoices"][number]["paymentMethod"])
+      : undefined,
+  };
+}
+
+function mapInventoryItemRow(row: Record<string, unknown>): InventoryItem {
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    category: String(row.category ?? "Supplement"),
+    supplementType: String(row.supplement_type ?? ""),
+    brand: String(row.brand ?? ""),
+    flavor: String(row.flavor ?? ""),
+    supplierName: String(row.supplier_name ?? ""),
+    sku: String(row.sku ?? ""),
+    batchCode: String(row.batch_code ?? ""),
+    unitSize: String(row.unit_size ?? ""),
+    expiryDate: String(row.expiry_date ?? ""),
+    stockUnits: Number(row.stock_units ?? 0),
+    reorderLevel: Number(row.reorder_level ?? 0),
+    costPriceInr: Number(row.cost_price_inr ?? 0),
+    sellingPriceInr: Number(row.selling_price_inr ?? 0),
+    status: (row.status ?? "In Stock") as InventoryItem["status"],
+  };
+}
+
+function mapInventorySaleRow(row: Record<string, unknown>): InventorySale {
+  return {
+    id: String(row.id ?? ""),
+    itemId: String(row.item_id ?? ""),
+    soldOn: String(row.sold_on ?? ""),
+    quantity: Number(row.quantity ?? 0),
+    totalAmountInr: Number(row.total_amount_inr ?? 0),
+    customerName: String(row.customer_name ?? ""),
+    paymentMethod: (row.payment_method ?? "Cash") as InventorySale["paymentMethod"],
+  };
+}
+
+function mapProgressCheckInRow(row: Record<string, unknown>): ProgressCheckIn {
+  return {
+    id: String(row.id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    recordedOn: String(row.recorded_on ?? ""),
+    weightKg: Number(row.weight_kg ?? 0),
+    waistCm: Number(row.waist_cm ?? 0),
+    hipsCm: Number(row.hips_cm ?? 0),
+    chestCm: Number(row.chest_cm ?? 0),
+    thighCm: Number(row.thigh_cm ?? 0),
+    coachNote: String(row.coach_note ?? ""),
+    energyLevel: (row.energy_level ?? "Medium") as ProgressCheckIn["energyLevel"],
+  };
+}
+
+function mapProgressPhotoRow(row: Record<string, unknown>): ProgressPhoto {
+  return {
+    id: String(row.id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    recordedOn: String(row.recorded_on ?? ""),
+    label: String(row.label ?? ""),
+    imageUrl: String(row.image_url ?? ""),
+    note: String(row.note ?? ""),
+  };
+}
+
+function mapExerciseRow(row: Record<string, unknown>): AppData["exercises"][number] {
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    category: String(row.category ?? ""),
+    difficulty: (row.difficulty ?? "Beginner") as AppData["exercises"][number]["difficulty"],
+    primaryMuscle: String(row.primary_muscle ?? ""),
+    equipment: String(row.equipment ?? ""),
+    mediaType: (row.media_type ?? "image") as AppData["exercises"][number]["mediaType"],
+    mediaUrl: String(row.media_url ?? ""),
+    cues: Array.isArray(row.cues) ? row.cues.map((item) => String(item)) : [],
+  };
+}
+
+function mapWorkoutPlanRow(row: Record<string, unknown>): AppData["workoutPlans"][number] {
+  const exercises = Array.isArray(row.exercises) ? row.exercises : [];
+
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    goal: String(row.goal ?? ""),
+    coach: String(row.coach ?? ""),
+    split: String(row.split ?? ""),
+    durationWeeks: Number(row.duration_weeks ?? 0),
+    exercises: exercises.map((item) => ({
+      id: String(item.id ?? ""),
+      exerciseId: String(item.exercise_id ?? item.exerciseId ?? ""),
+      sets: Number(item.sets ?? 0),
+      reps: String(item.reps ?? ""),
+      restSeconds: Number(item.rest_seconds ?? item.restSeconds ?? 0),
+      notes: String(item.notes ?? ""),
+    })),
+  };
+}
+
+function mapAssignmentRow(row: Record<string, unknown>): AppData["assignments"][number] {
+  return {
+    id: String(row.id ?? ""),
+    planId: String(row.plan_id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    startDate: String(row.start_date ?? ""),
+    status: (row.status ?? "Active") as AppData["assignments"][number]["status"],
+  };
+}
+
+function mapWorkoutLogRow(row: Record<string, unknown>): AppData["workoutLogs"][number] {
+  return {
+    id: String(row.id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    exerciseId: String(row.exercise_id ?? ""),
+    date: String(row.date ?? ""),
+    setsCompleted: Number(row.sets_completed ?? 0),
+    repsCompleted: String(row.reps_completed ?? ""),
+    weightKg: Number(row.weight_kg ?? 0),
+    notes: String(row.notes ?? ""),
+  };
+}
+
+function mapSessionRow(row: Record<string, unknown>): AppData["sessions"][number] {
+  return {
+    id: String(row.id ?? ""),
+    title: String(row.title ?? ""),
+    coach: String(row.coach ?? ""),
+    day: String(row.day ?? ""),
+    time: String(row.time ?? ""),
+    capacity: Number(row.capacity ?? 0),
+    room: String(row.room ?? ""),
+  };
+}
+
+function mapAttendanceRow(row: Record<string, unknown>): AppData["attendance"][number] {
+  return {
+    id: String(row.id ?? ""),
+    sessionId: String(row.session_id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    status: (row.status ?? "Booked") as AppData["attendance"][number]["status"],
+  };
+}
+
 function mapResponseRow(row: {
   id: string;
   form_id: string;
@@ -109,22 +295,37 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
   }
 
   return {
-    profiles: (profiles.data ?? []) as AppData["profiles"],
-    memberships: (memberships.data ?? []) as AppData["memberships"],
-    invoices: (invoices.data ?? []) as AppData["invoices"],
-    inventoryItems: (inventoryItems.data ?? []) as AppData["inventoryItems"],
-    inventorySales: (inventorySales.data ?? []) as AppData["inventorySales"],
-    exercises: (exercises.data ?? []) as AppData["exercises"],
-    workoutPlans: (workoutPlans.data ?? []).map((plan) => ({
-      ...plan,
-      exercises: plan.exercises ?? [],
-    })) as AppData["workoutPlans"],
-    assignments: (assignments.data ?? []) as AppData["assignments"],
-    workoutLogs: (workoutLogs.data ?? []) as AppData["workoutLogs"],
-    progressCheckIns: (progressCheckIns.data ?? []) as ProgressCheckIn[],
-    progressPhotos: (progressPhotos.data ?? []) as ProgressPhoto[],
-    sessions: (sessions.data ?? []) as AppData["sessions"],
-    attendance: (attendance.data ?? []) as AppData["attendance"],
+    profiles: (profiles.data ?? []).map((row) => mapProfileRow(row as Record<string, unknown>)),
+    memberships: (memberships.data ?? []).map((row) =>
+      mapMembershipRow(row as Record<string, unknown>),
+    ),
+    invoices: (invoices.data ?? []).map((row) => mapInvoiceRow(row as Record<string, unknown>)),
+    inventoryItems: (inventoryItems.data ?? []).map((row) =>
+      mapInventoryItemRow(row as Record<string, unknown>),
+    ),
+    inventorySales: (inventorySales.data ?? []).map((row) =>
+      mapInventorySaleRow(row as Record<string, unknown>),
+    ),
+    exercises: (exercises.data ?? []).map((row) => mapExerciseRow(row as Record<string, unknown>)),
+    workoutPlans: (workoutPlans.data ?? []).map((row) =>
+      mapWorkoutPlanRow(row as Record<string, unknown>),
+    ),
+    assignments: (assignments.data ?? []).map((row) =>
+      mapAssignmentRow(row as Record<string, unknown>),
+    ),
+    workoutLogs: (workoutLogs.data ?? []).map((row) =>
+      mapWorkoutLogRow(row as Record<string, unknown>),
+    ),
+    progressCheckIns: (progressCheckIns.data ?? []).map((row) =>
+      mapProgressCheckInRow(row as Record<string, unknown>),
+    ),
+    progressPhotos: (progressPhotos.data ?? []).map((row) =>
+      mapProgressPhotoRow(row as Record<string, unknown>),
+    ),
+    sessions: (sessions.data ?? []).map((row) => mapSessionRow(row as Record<string, unknown>)),
+    attendance: (attendance.data ?? []).map((row) =>
+      mapAttendanceRow(row as Record<string, unknown>),
+    ),
   };
 }
 
