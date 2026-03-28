@@ -1,0 +1,15 @@
+export const adminNavLinks = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/progress", label: "Progress" },
+  { href: "/admin/reminders", label: "Reminders" },
+  { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/attendance", label: "Attendance" },
+  { href: "/admin/form-responses", label: "Form responses" },
+  { href: "/admin/exercises", label: "Exercise library" },
+  { href: "/admin/plans", label: "Workout plans" },
+  { href: "/admin/memberships", label: "Memberships" },
+  { href: "/admin/schedule", label: "Schedule" },
+  { href: "/admin/data-tools", label: "Data tools" },
+];

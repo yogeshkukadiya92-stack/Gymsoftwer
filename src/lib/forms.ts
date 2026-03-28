@@ -1,0 +1,174 @@
+export type FormFieldType =
+  | "short_text"
+  | "paragraph"
+  | "phone"
+  | "email"
+  | "dropdown"
+  | "multiple_choice"
+  | "checkbox";
+
+export type FieldCondition = {
+  fieldId: string;
+  equals: string;
+};
+
+export type IntakeFormField = {
+  id: string;
+  label: string;
+  type: FormFieldType;
+  required: boolean;
+  options?: string[];
+  condition?: FieldCondition;
+};
+
+export type IntakeForm = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  audience: string;
+  status: "Active" | "Draft";
+  fields: IntakeFormField[];
+};
+
+export type IntakeFormResponse = {
+  id: string;
+  formId: string;
+  submittedAt: string;
+  answers: Record<string, string>;
+};
+
+export type FormsStore = {
+  forms: IntakeForm[];
+  responses: IntakeFormResponse[];
+};
+
+export type NewIntakeFormInput = {
+  title: string;
+  description: string;
+  audience: string;
+  fields?: IntakeFormField[];
+};
+
+export const starterForms: IntakeForm[] = [
+  {
+    id: "form-1",
+    slug: "client-intake",
+    title: "Client Intake Form",
+    description: "Collect basic workshop joining details, goals, and contact info.",
+    audience: "New clients",
+    status: "Active",
+    fields: [
+      { id: "name", label: "Full name", type: "short_text", required: true },
+      { id: "phone", label: "Phone number", type: "phone", required: true },
+      { id: "email", label: "Email address", type: "email", required: true },
+      {
+        id: "goal",
+        label: "Primary goal",
+        type: "multiple_choice",
+        required: true,
+        options: ["Weight loss", "Yoga mobility", "Strength", "Stress relief"],
+      },
+      {
+        id: "notes",
+        label: "Any health note or expectation",
+        type: "paragraph",
+        required: false,
+        condition: {
+          fieldId: "goal",
+          equals: "Yoga mobility",
+        },
+      },
+    ],
+  },
+  {
+    id: "form-2",
+    slug: "weekly-feedback",
+    title: "Weekly Feedback Form",
+    description: "Take quick feedback after weekly online sessions.",
+    audience: "Existing workshop clients",
+    status: "Active",
+    fields: [
+      { id: "name", label: "Full name", type: "short_text", required: true },
+      {
+        id: "favorite",
+        label: "Which class helped most this week?",
+        type: "short_text",
+        required: true,
+      },
+      {
+        id: "improve",
+        label: "What should we improve next week?",
+        type: "paragraph",
+        required: false,
+      },
+      {
+        id: "topics",
+        label: "Which topics do you want next?",
+        type: "checkbox",
+        required: false,
+        options: ["Mobility", "Breathwork", "Core", "Fat loss"],
+      },
+    ],
+  },
+];
+
+export const starterResponses: IntakeFormResponse[] = [
+  {
+    id: "response-1",
+    formId: "form-1",
+    submittedAt: "2026-03-18 08:45",
+    answers: {
+      name: "Riya Sharma",
+      phone: "+91 98765 40000",
+      email: "riya@example.com",
+      goal: "Yoga mobility",
+      notes: "Need low-impact sessions for the first week.",
+    },
+  },
+  {
+    id: "response-2",
+    formId: "form-1",
+    submittedAt: "2026-03-18 09:05",
+    answers: {
+      name: "Parth Mehta",
+      phone: "+91 98765 41111",
+      email: "parth@example.com",
+      goal: "Weight loss",
+      notes: "Available only for morning classes.",
+    },
+  },
+  {
+    id: "response-3",
+    formId: "form-2",
+    submittedAt: "2026-03-18 10:15",
+    answers: {
+      name: "Diya Patel",
+      favorite: "Fat Loss Mobility Flow",
+      improve: "Please share replay link after class.",
+      topics: "Mobility, Core",
+    },
+  },
+];
+
+export function slugifyFormTitle(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function buildDefaultFormFields(title: string): IntakeFormField[] {
+  return [
+    { id: "name", label: "Full name", type: "short_text", required: true },
+    { id: "phone", label: "Phone number", type: "phone", required: true },
+    { id: "email", label: "Email address", type: "email", required: true },
+    {
+      id: "notes",
+      label: `${title} details`,
+      type: "paragraph",
+      required: false,
+    },
+  ];
+}

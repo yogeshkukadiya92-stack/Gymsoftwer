@@ -1,0 +1,769 @@
+import * as XLSX from "xlsx";
+
+import { AppData, Attendance, ClassSession, InventoryItem, InventorySale, Profile } from "@/lib/types";
+
+const workbookSheetOrder = [
+  "profiles",
+  "memberships",
+  "invoices",
+  "exercises",
+  "workout_plans",
+  "workout_plan_exercises",
+  "member_workout_assignments",
+  "workout_logs",
+  "classes_or_sessions",
+  "attendance",
+] as const;
+
+type SheetName = (typeof workbookSheetOrder)[number];
+
+type ImportSummary = {
+  sheet: SheetName;
+  rows: number;
+};
+
+function toJsonSheet<T extends Record<string, unknown>>(rows: T[]) {
+  return XLSX.utils.json_to_sheet(rows);
+}
+
+function normalizeHeader(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function normalizeKeys(row: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [normalizeHeader(key), value]),
+  );
+}
+
+function toStringValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value).trim();
+}
+
+function toNumberValue(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toArrayValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => toStringValue(item)).filter(Boolean);
+  }
+
+  return toStringValue(value)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function buildWorkbookFromAppData(data: AppData) {
+  const workbook = XLSX.utils.book_new();
+
+  const planExercises = data.workoutPlans.flatMap((plan) =>
+    plan.exercises.map((exercise) => ({
+      id: exercise.id,
+      workout_plan_id: plan.id,
+      exercise_id: exercise.exerciseId,
+      sets: exercise.sets,
+      reps: exercise.reps,
+      rest_seconds: exercise.restSeconds,
+      notes: exercise.notes,
+    })),
+  );
+
+  const sheets: Record<SheetName, Record<string, unknown>[]> = {
+    profiles: data.profiles.map((profile) => ({
+      id: profile.id,
+      full_name: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      fitness_goal: profile.fitnessGoal,
+      branch: profile.branch,
+      joined_on: profile.joinedOn,
+    })),
+    memberships: data.memberships.map((membership) => ({
+      id: membership.id,
+      member_id: membership.memberId,
+      plan_name: membership.planName,
+      status: membership.status,
+      start_date: membership.startDate,
+      renewal_date: membership.renewalDate,
+      billing_cycle: membership.billingCycle,
+      amount_inr: membership.amountInr,
+      payment_status: membership.paymentStatus,
+      last_payment_date: membership.lastPaymentDate,
+      next_invoice_date: membership.nextInvoiceDate,
+      payment_method: membership.paymentMethod,
+      outstanding_amount_inr: membership.outstandingAmountInr,
+    })),
+    invoices: data.invoices.map((invoice) => ({
+      id: invoice.id,
+      membership_id: invoice.membershipId,
+      member_id: invoice.memberId,
+      invoice_number: invoice.invoiceNumber,
+      issued_on: invoice.issuedOn,
+      due_on: invoice.dueOn,
+      amount_inr: invoice.amountInr,
+      status: invoice.status,
+      paid_on: invoice.paidOn ?? "",
+      payment_method: invoice.paymentMethod ?? "",
+    })),
+    exercises: data.exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.name,
+      category: exercise.category,
+      difficulty: exercise.difficulty,
+      primary_muscle: exercise.primaryMuscle,
+      equipment: exercise.equipment,
+      media_type: exercise.mediaType,
+      media_url: exercise.mediaUrl,
+      cues: exercise.cues.join(", "),
+    })),
+    workout_plans: data.workoutPlans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      goal: plan.goal,
+      coach: plan.coach,
+      split: plan.split,
+      duration_weeks: plan.durationWeeks,
+    })),
+    workout_plan_exercises: planExercises,
+    member_workout_assignments: data.assignments.map((assignment) => ({
+      id: assignment.id,
+      plan_id: assignment.planId,
+      member_id: assignment.memberId,
+      start_date: assignment.startDate,
+      status: assignment.status,
+    })),
+    workout_logs: data.workoutLogs.map((log) => ({
+      id: log.id,
+      member_id: log.memberId,
+      exercise_id: log.exerciseId,
+      date: log.date,
+      sets_completed: log.setsCompleted,
+      reps_completed: log.repsCompleted,
+      weight_kg: log.weightKg,
+      notes: log.notes,
+    })),
+    classes_or_sessions: data.sessions.map((session) => ({
+      id: session.id,
+      title: session.title,
+      coach: session.coach,
+      day: session.day,
+      time: session.time,
+      capacity: session.capacity,
+      room: session.room,
+    })),
+    attendance: data.attendance.map((entry) => ({
+      id: entry.id,
+      session_id: entry.sessionId,
+      member_id: entry.memberId,
+      status: entry.status,
+    })),
+  };
+
+  workbookSheetOrder.forEach((sheetName) => {
+    XLSX.utils.book_append_sheet(workbook, toJsonSheet(sheets[sheetName]), sheetName);
+  });
+
+  return workbook;
+}
+
+export function buildTemplateWorkbook(data: AppData) {
+  const workbook = buildWorkbookFromAppData({
+    ...data,
+    profiles: data.profiles.slice(0, 1),
+    memberships: data.memberships.slice(0, 1),
+    invoices: data.invoices.slice(0, 1),
+    exercises: data.exercises.slice(0, 1),
+    workoutPlans: data.workoutPlans.slice(0, 1),
+    assignments: data.assignments.slice(0, 1),
+    workoutLogs: data.workoutLogs.slice(0, 1),
+    sessions: data.sessions.slice(0, 1),
+    attendance: data.attendance.slice(0, 1),
+  });
+
+  return workbook;
+}
+
+export function workbookToBuffer(workbook: XLSX.WorkBook) {
+  return XLSX.write(workbook, {
+    type: "buffer",
+    bookType: "xlsx",
+  });
+}
+
+export function buildAttendanceWorkbook(
+  sessions: ClassSession[],
+  attendance: Attendance[],
+  profiles: Profile[],
+) {
+  const workbook = XLSX.utils.book_new();
+
+  const sessionRows = sessions.map((session) => ({
+    id: session.id,
+    title: session.title,
+    coach: session.coach,
+    day: session.day,
+    time: session.time,
+    capacity: session.capacity,
+    room: session.room,
+  }));
+
+  const attendeeRows = attendance.map((entry) => {
+    const profile = profiles.find((item) => item.id === entry.memberId);
+
+    return {
+      id: entry.id,
+      session_id: entry.sessionId,
+      member_id: entry.memberId,
+      member_name: profile?.fullName ?? "",
+      member_email: profile?.email ?? "",
+      status: entry.status,
+    };
+  });
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(sessionRows), "classes_or_sessions");
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(attendeeRows), "attendance");
+
+  return workbook;
+}
+
+export function buildAttendanceTemplateWorkbook(
+  sessions: ClassSession[],
+  attendance: Attendance[],
+  profiles: Profile[],
+) {
+  return buildAttendanceWorkbook(
+    sessions.slice(0, 2),
+    attendance.slice(0, 3),
+    profiles,
+  );
+}
+
+export function buildMembersWorkbook(profiles: Profile[]) {
+  const workbook = XLSX.utils.book_new();
+
+  const memberRows = profiles
+    .filter((profile) => profile.role === "member")
+    .map((profile) => ({
+      id: profile.id,
+      full_name: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      fitness_goal: profile.fitnessGoal,
+      branch: profile.branch,
+      joined_on: profile.joinedOn,
+    }));
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(memberRows), "profiles");
+
+  return workbook;
+}
+
+export function buildMembersTemplateWorkbook() {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet([
+      {
+        id: "member-101",
+        full_name: "Client Name",
+        email: "client@example.com",
+        phone: "+91 98765 00000",
+        role: "member",
+        fitness_goal: "Weight loss",
+        branch: "Main Branch",
+        joined_on: "2026-03-18",
+      },
+    ]),
+    "profiles",
+  );
+
+  return workbook;
+}
+
+export function buildInventoryWorkbook(
+  items: InventoryItem[],
+  sales: InventorySale[],
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        supplement_type: item.supplementType,
+        brand: item.brand,
+        flavor: item.flavor,
+        supplier_name: item.supplierName,
+        sku: item.sku,
+        batch_code: item.batchCode,
+        unit_size: item.unitSize,
+        expiry_date: item.expiryDate,
+        stock_units: item.stockUnits,
+        reorder_level: item.reorderLevel,
+        cost_price_inr: item.costPriceInr,
+        selling_price_inr: item.sellingPriceInr,
+        status: item.status,
+      })),
+    ),
+    "inventory_items",
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      sales.map((sale) => ({
+        id: sale.id,
+        item_id: sale.itemId,
+        sold_on: sale.soldOn,
+        quantity: sale.quantity,
+        total_amount_inr: sale.totalAmountInr,
+        customer_name: sale.customerName,
+        payment_method: sale.paymentMethod,
+      })),
+    ),
+    "inventory_sales",
+  );
+
+  return workbook;
+}
+
+export function buildInventoryTemplateWorkbook() {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet([
+      {
+        id: "inventory-101",
+        name: "Creatine Monohydrate",
+        category: "Creatine",
+        supplement_type: "Creatine monohydrate",
+        brand: "Brand Name",
+        flavor: "Unflavored",
+        supplier_name: "Supplier Name",
+        sku: "CRT-500G",
+        batch_code: "CRT-2403-A",
+        unit_size: "500 g jar",
+        expiry_date: "2027-03-31",
+        stock_units: 20,
+        reorder_level: 6,
+        cost_price_inr: 650,
+        selling_price_inr: 999,
+      },
+    ]),
+    "inventory_items",
+  );
+
+  return workbook;
+}
+
+export function parseMembersWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+
+  if (!workbook.SheetNames.includes("profiles")) {
+    throw new Error("Missing sheet: profiles. Please use the member template file.");
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+    workbook.Sheets.profiles,
+    {
+      defval: "",
+    },
+  );
+
+  const profiles = rows.map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      fullName: toStringValue(item.full_name),
+      email: toStringValue(item.email),
+      phone: toStringValue(item.phone),
+      role: (toStringValue(item.role) || "member") as "member" | "trainer" | "admin",
+      fitnessGoal: toStringValue(item.fitness_goal),
+      branch: toStringValue(item.branch),
+      joinedOn: toStringValue(item.joined_on),
+    };
+  });
+
+  const members = profiles.filter((profile) => profile.role === "member");
+  const missingRequired = members.filter(
+    (member) => !member.fullName || !member.email || !member.phone,
+  );
+
+  if (missingRequired.length > 0) {
+    throw new Error(
+      "Some member rows are missing required values. full_name, email, and phone are required.",
+    );
+  }
+
+  const duplicateEmails = members.filter(
+    (member, index) =>
+      members.findIndex((item) => item.email.toLowerCase() === member.email.toLowerCase()) !==
+      index,
+  );
+
+  return {
+    members,
+    summary: [{ sheet: "profiles", rows: members.length }],
+    duplicateEmails: duplicateEmails.map((item) => item.email),
+  };
+}
+
+export function parseInventoryWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+
+  if (!workbook.SheetNames.includes("inventory_items")) {
+    throw new Error(
+      "Missing sheet: inventory_items. Please use the inventory template file.",
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+    workbook.Sheets.inventory_items,
+    {
+      defval: "",
+    },
+  );
+
+  const items = rows.map((row) => {
+    const item = normalizeKeys(row);
+    const stockUnits = toNumberValue(item.stock_units);
+    const reorderLevel = toNumberValue(item.reorder_level);
+
+    return {
+      id: toStringValue(item.id) || `inventory-${crypto.randomUUID()}`,
+      name: toStringValue(item.name),
+      category: toStringValue(item.category) || "Supplement",
+      supplementType: toStringValue(item.supplement_type),
+      brand: toStringValue(item.brand),
+      flavor: toStringValue(item.flavor),
+      supplierName: toStringValue(item.supplier_name),
+      sku: toStringValue(item.sku),
+      batchCode: toStringValue(item.batch_code),
+      unitSize: toStringValue(item.unit_size),
+      expiryDate: toStringValue(item.expiry_date),
+      stockUnits,
+      reorderLevel,
+      costPriceInr: toNumberValue(item.cost_price_inr),
+      sellingPriceInr: toNumberValue(item.selling_price_inr),
+      status:
+        stockUnits <= 0
+          ? "Out of Stock"
+          : stockUnits <= reorderLevel
+            ? "Low Stock"
+            : "In Stock",
+    } as InventoryItem;
+  });
+
+  const missingRequired = items.filter((item) => !item.name || !item.sku);
+
+  if (missingRequired.length > 0) {
+    throw new Error("Some inventory rows are missing required values. name and sku are required.");
+  }
+
+  return {
+    items,
+    summary: [{ sheet: "inventory_items", rows: items.length }],
+  };
+}
+
+export function parseAttendanceWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const requiredSheets = ["classes_or_sessions", "attendance"] as const;
+  const missingSheets = requiredSheets.filter(
+    (sheetName) => !workbook.SheetNames.includes(sheetName),
+  );
+
+  if (missingSheets.length > 0) {
+    throw new Error(
+      `Missing sheet(s): ${missingSheets.join(", ")}. Please use the attendance template file.`,
+    );
+  }
+
+  const getRows = (sheetName: (typeof requiredSheets)[number]) =>
+    XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
+      defval: "",
+    });
+
+  const sessions = getRows("classes_or_sessions").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      title: toStringValue(item.title),
+      coach: toStringValue(item.coach),
+      day: toStringValue(item.day),
+      time: toStringValue(item.time),
+      capacity: toNumberValue(item.capacity),
+      room: toStringValue(item.room),
+    };
+  });
+
+  const attendance = getRows("attendance").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      sessionId: toStringValue(item.session_id),
+      memberId: toStringValue(item.member_id),
+      status: toStringValue(item.status) as "Booked" | "Checked In" | "Missed",
+    };
+  });
+
+  return {
+    sessions,
+    attendance,
+    summary: [
+      { sheet: "classes_or_sessions", rows: sessions.length },
+      { sheet: "attendance", rows: attendance.length },
+    ],
+  };
+}
+
+export function parseImportWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const missingSheets = workbookSheetOrder.filter(
+    (sheetName) => !workbook.SheetNames.includes(sheetName),
+  );
+
+  if (missingSheets.length > 0) {
+    throw new Error(
+      `Missing sheet(s): ${missingSheets.join(", ")}. Please use the export/template file structure.`,
+    );
+  }
+
+  const getRows = (sheetName: SheetName) =>
+    XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
+      defval: "",
+    });
+
+  const profiles = getRows("profiles").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      fullName: toStringValue(item.full_name),
+      email: toStringValue(item.email),
+      phone: toStringValue(item.phone),
+      role: toStringValue(item.role) as "member" | "trainer" | "admin",
+      fitnessGoal: toStringValue(item.fitness_goal),
+      branch: toStringValue(item.branch),
+      joinedOn: toStringValue(item.joined_on),
+    };
+  });
+
+  const memberships = getRows("memberships").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      memberId: toStringValue(item.member_id),
+      planName: toStringValue(item.plan_name),
+      status: toStringValue(item.status) as "Active" | "Expiring Soon" | "On Hold",
+      startDate: toStringValue(item.start_date),
+      renewalDate: toStringValue(item.renewal_date),
+      billingCycle: toStringValue(item.billing_cycle) as "Monthly" | "Quarterly" | "Yearly",
+      amountInr: toNumberValue(item.amount_inr),
+      paymentStatus: toStringValue(item.payment_status) as
+        | "Paid"
+        | "Pending"
+        | "Overdue"
+        | "Partially Paid",
+      lastPaymentDate: toStringValue(item.last_payment_date),
+      nextInvoiceDate: toStringValue(item.next_invoice_date),
+      paymentMethod: toStringValue(item.payment_method) as
+        | "UPI"
+        | "Cash"
+        | "Bank Transfer"
+        | "Card",
+      outstandingAmountInr: toNumberValue(item.outstanding_amount_inr),
+    };
+  });
+
+  const invoices = getRows("invoices").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      membershipId: toStringValue(item.membership_id),
+      memberId: toStringValue(item.member_id),
+      invoiceNumber: toStringValue(item.invoice_number),
+      issuedOn: toStringValue(item.issued_on),
+      dueOn: toStringValue(item.due_on),
+      amountInr: toNumberValue(item.amount_inr),
+      status: toStringValue(item.status) as
+        | "Paid"
+        | "Pending"
+        | "Overdue"
+        | "Partially Paid",
+      paidOn: toStringValue(item.paid_on),
+      paymentMethod: toStringValue(item.payment_method) as
+        | "UPI"
+        | "Cash"
+        | "Bank Transfer"
+        | "Card",
+    };
+  });
+
+  const exercises = getRows("exercises").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      name: toStringValue(item.name),
+      category: toStringValue(item.category),
+      difficulty: toStringValue(item.difficulty) as
+        | "Beginner"
+        | "Intermediate"
+        | "Advanced",
+      primaryMuscle: toStringValue(item.primary_muscle),
+      equipment: toStringValue(item.equipment),
+      mediaType: toStringValue(item.media_type) as "image" | "video",
+      mediaUrl: toStringValue(item.media_url),
+      cues: toArrayValue(item.cues),
+    };
+  });
+
+  const workoutPlans = getRows("workout_plans").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      name: toStringValue(item.name),
+      goal: toStringValue(item.goal),
+      coach: toStringValue(item.coach),
+      split: toStringValue(item.split),
+      durationWeeks: toNumberValue(item.duration_weeks),
+      exercises: [],
+    };
+  });
+
+  const planExerciseRows = getRows("workout_plan_exercises").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      workoutPlanId: toStringValue(item.workout_plan_id),
+      exerciseId: toStringValue(item.exercise_id),
+      sets: toNumberValue(item.sets),
+      reps: toStringValue(item.reps),
+      restSeconds: toNumberValue(item.rest_seconds),
+      notes: toStringValue(item.notes),
+    };
+  });
+
+  const assignments = getRows("member_workout_assignments").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      planId: toStringValue(item.plan_id),
+      memberId: toStringValue(item.member_id),
+      startDate: toStringValue(item.start_date),
+      status: toStringValue(item.status) as "Active" | "Paused" | "Completed",
+    };
+  });
+
+  const workoutLogs = getRows("workout_logs").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      memberId: toStringValue(item.member_id),
+      exerciseId: toStringValue(item.exercise_id),
+      date: toStringValue(item.date),
+      setsCompleted: toNumberValue(item.sets_completed),
+      repsCompleted: toStringValue(item.reps_completed),
+      weightKg: toNumberValue(item.weight_kg),
+      notes: toStringValue(item.notes),
+    };
+  });
+
+  const sessions = getRows("classes_or_sessions").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      title: toStringValue(item.title),
+      coach: toStringValue(item.coach),
+      day: toStringValue(item.day),
+      time: toStringValue(item.time),
+      capacity: toNumberValue(item.capacity),
+      room: toStringValue(item.room),
+    };
+  });
+
+  const attendance = getRows("attendance").map((row) => {
+    const item = normalizeKeys(row);
+
+    return {
+      id: toStringValue(item.id),
+      sessionId: toStringValue(item.session_id),
+      memberId: toStringValue(item.member_id),
+      status: toStringValue(item.status) as "Booked" | "Checked In" | "Missed",
+    };
+  });
+
+  const planExerciseMap = new Map(
+    workoutPlans.map((plan) => [
+      plan.id,
+      planExerciseRows
+        .filter((item) => item.workoutPlanId === plan.id)
+        .map((item) => ({
+          id: item.id,
+          exerciseId: item.exerciseId,
+          sets: item.sets,
+          reps: item.reps,
+          restSeconds: item.restSeconds,
+          notes: item.notes,
+        })),
+    ]),
+  );
+
+  const data: AppData = {
+    profiles,
+    memberships,
+    invoices,
+    inventoryItems: [],
+    inventorySales: [],
+    exercises,
+    workoutPlans: workoutPlans.map((plan) => ({
+      ...plan,
+      exercises: planExerciseMap.get(plan.id) ?? [],
+    })),
+    assignments,
+    workoutLogs,
+    progressCheckIns: [],
+    progressPhotos: [],
+    sessions,
+    attendance,
+  };
+
+  const summary: ImportSummary[] = workbookSheetOrder.map((sheet) => ({
+    sheet,
+    rows: getRows(sheet).length,
+  }));
+
+  return {
+    data,
+    summary,
+  };
+}

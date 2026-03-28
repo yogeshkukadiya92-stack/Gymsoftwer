@@ -1,0 +1,586 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+
+import {
+  FieldCondition,
+  IntakeForm,
+  IntakeFormField,
+  IntakeFormResponse,
+  NewIntakeFormInput,
+} from "@/lib/forms";
+
+type FormsWorkspaceProps = {
+  initialForms: IntakeForm[];
+  initialResponses: IntakeFormResponse[];
+};
+
+type CreateFormResult = {
+  message?: string;
+  error?: string;
+  form?: IntakeForm;
+  sharePath?: string;
+};
+
+type BuilderField = IntakeFormField & {
+  optionsText?: string;
+  conditionFieldId?: string;
+  conditionEquals?: string;
+};
+
+const fieldTypeOptions: IntakeFormField["type"][] = [
+  "short_text",
+  "paragraph",
+  "phone",
+  "email",
+  "dropdown",
+  "multiple_choice",
+  "checkbox",
+];
+
+function makeFieldId() {
+  return `field-${crypto.randomUUID()}`;
+}
+
+function createEmptyField(): BuilderField {
+  return {
+    id: makeFieldId(),
+    label: "",
+    type: "short_text",
+    required: true,
+    options: [],
+    optionsText: "",
+    conditionFieldId: "",
+    conditionEquals: "",
+  };
+}
+
+function toBuilderField(field: IntakeFormField): BuilderField {
+  return {
+    ...field,
+    optionsText: field.options?.join(", ") ?? "",
+    conditionFieldId: field.condition?.fieldId ?? "",
+    conditionEquals: field.condition?.equals ?? "",
+  };
+}
+
+function toFormField(field: BuilderField): IntakeFormField {
+  const supportsOptions =
+    field.type === "dropdown" ||
+    field.type === "multiple_choice" ||
+    field.type === "checkbox";
+
+  const condition: FieldCondition | undefined =
+    field.conditionFieldId && field.conditionEquals
+      ? {
+          fieldId: field.conditionFieldId,
+          equals: field.conditionEquals,
+        }
+      : undefined;
+
+  return {
+    id: field.id,
+    label: field.label.trim() || "Untitled question",
+    type: field.type,
+    required: field.required,
+    options: supportsOptions
+      ? (field.optionsText ?? "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : undefined,
+    condition,
+  };
+}
+
+const initialFields: IntakeFormField[] = [
+  {
+    id: "name",
+    label: "Full name",
+    type: "short_text",
+    required: true,
+  },
+  {
+    id: "phone",
+    label: "Phone number",
+    type: "phone",
+    required: true,
+  },
+];
+
+const initialFormState: NewIntakeFormInput = {
+  title: "",
+  description: "",
+  audience: "",
+  fields: initialFields,
+};
+
+export function FormsWorkspace({
+  initialForms,
+  initialResponses,
+}: FormsWorkspaceProps) {
+  const [forms, setForms] = useState<IntakeForm[]>(initialForms);
+  const [responses] = useState<IntakeFormResponse[]>(initialResponses);
+  const [selectedFormId, setSelectedFormId] = useState(initialForms[0]?.id ?? "");
+  const [formState, setFormState] = useState<NewIntakeFormInput>(initialFormState);
+  const [builderFields, setBuilderFields] = useState<BuilderField[]>(
+    initialFields.map(toBuilderField),
+  );
+  const [isCreating, setIsCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<CreateFormResult | null>(null);
+  const [editingFormId, setEditingFormId] = useState<string | null>(null);
+
+  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? forms[0];
+  const selectedResponses = useMemo(
+    () => responses.filter((response) => response.formId === selectedForm?.id),
+    [responses, selectedForm],
+  );
+
+  function syncFields(nextFields: BuilderField[]) {
+    setBuilderFields(nextFields);
+    setFormState((current) => ({
+      ...current,
+      fields: nextFields.map(toFormField),
+    }));
+  }
+
+  function resetBuilder() {
+    setFormState(initialFormState);
+    setBuilderFields(initialFields.map(toBuilderField));
+    setEditingFormId(null);
+  }
+
+  function loadFormIntoBuilder(form: IntakeForm) {
+    setEditingFormId(form.id);
+    setFormState({
+      title: form.title,
+      description: form.description,
+      audience: form.audience,
+      fields: form.fields,
+    });
+    setBuilderFields(form.fields.map(toBuilderField));
+    setCreateResult(null);
+  }
+
+  async function createForm() {
+    if (!formState.title.trim()) {
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateResult(null);
+
+    const response = await fetch("/api/admin/forms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formState),
+    });
+
+    const payload = (await response.json()) as CreateFormResult;
+
+    if (response.ok && payload.form) {
+      setForms((current) => [payload.form!, ...current]);
+      setSelectedFormId(payload.form.id);
+      resetBuilder();
+    }
+
+    setCreateResult(payload);
+    setIsCreating(false);
+  }
+
+  async function saveFormChanges() {
+    if (!editingFormId || !formState.title.trim()) {
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateResult(null);
+
+    const response = await fetch("/api/admin/forms", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editingFormId,
+        ...formState,
+      }),
+    });
+
+    const payload = (await response.json()) as CreateFormResult;
+
+    if (response.ok && payload.form) {
+      setForms((current) =>
+        current.map((form) => (form.id === payload.form!.id ? payload.form! : form)),
+      );
+      setSelectedFormId(payload.form.id);
+      resetBuilder();
+    }
+
+    setCreateResult(payload);
+    setIsCreating(false);
+  }
+
+  const shareUrl =
+    createResult?.sharePath && typeof window !== "undefined"
+      ? `${window.location.origin}${createResult.sharePath}`
+      : createResult?.sharePath;
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+      <section className="space-y-6">
+        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+            {editingFormId ? "Edit form" : "Create form"}
+          </p>
+          <h2 className="mt-2 font-serif text-2xl text-slate-950">
+            {editingFormId
+              ? "Selected form edit karo"
+              : "Google Form jevu advanced custom form banao"}
+          </h2>
+          <div className="mt-5 grid gap-4">
+            <input
+              value={formState.title}
+              onChange={(event) =>
+                setFormState((current) => ({ ...current, title: event.target.value }))
+              }
+              className="rounded-2xl border border-slate-300 px-4 py-3"
+              placeholder="Form title"
+            />
+            <textarea
+              value={formState.description}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+              className="min-h-28 rounded-2xl border border-slate-300 px-4 py-3"
+              placeholder="What information do you want to collect?"
+            />
+            <input
+              value={formState.audience}
+              onChange={(event) =>
+                setFormState((current) => ({ ...current, audience: event.target.value }))
+              }
+              className="rounded-2xl border border-slate-300 px-4 py-3"
+              placeholder="Audience"
+            />
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Questions
+              </p>
+              <button
+                type="button"
+                onClick={() => syncFields([...builderFields, createEmptyField()])}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Add question
+              </button>
+            </div>
+
+            {builderFields.map((field, index) => {
+              const candidateParents = builderFields.filter((item) => item.id !== field.id);
+
+              return (
+                <div key={field.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-950">Question {index + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        syncFields(builderFields.filter((item) => item.id !== field.id))
+                      }
+                      className="rounded-full border border-rose-200 px-3 py-1 text-sm font-medium text-rose-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-4 grid gap-4">
+                    <input
+                      value={field.label}
+                      onChange={(event) =>
+                        syncFields(
+                          builderFields.map((item) =>
+                            item.id === field.id
+                              ? { ...item, label: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                      className="rounded-2xl border border-slate-300 px-4 py-3"
+                      placeholder="Question label"
+                    />
+                    <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                      <select
+                        value={field.type}
+                        onChange={(event) =>
+                          syncFields(
+                            builderFields.map((item) =>
+                              item.id === field.id
+                                ? {
+                                    ...item,
+                                    type: event.target.value as IntakeFormField["type"],
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                      >
+                        {fieldTypeOptions.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(event) =>
+                            syncFields(
+                              builderFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, required: event.target.checked }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                        Required
+                      </label>
+                    </div>
+
+                    {field.type === "dropdown" ||
+                    field.type === "multiple_choice" ||
+                    field.type === "checkbox" ? (
+                      <input
+                        value={field.optionsText ?? ""}
+                        onChange={(event) =>
+                          syncFields(
+                            builderFields.map((item) =>
+                              item.id === field.id
+                                ? { ...item, optionsText: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        placeholder="Options comma thi lakhvo. Example: Beginner, Intermediate, Advanced"
+                      />
+                    ) : null}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <select
+                        value={field.conditionFieldId ?? ""}
+                        onChange={(event) =>
+                          syncFields(
+                            builderFields.map((item) =>
+                              item.id === field.id
+                                ? { ...item, conditionFieldId: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                      >
+                        <option value="">Always show</option>
+                        {candidateParents.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            Show when {item.label || `Question ${candidateParents.indexOf(item) + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        value={field.conditionEquals ?? ""}
+                        onChange={(event) =>
+                          syncFields(
+                            builderFields.map((item) =>
+                              item.id === field.id
+                                ? { ...item, conditionEquals: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        placeholder="Show if answer equals..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={editingFormId ? saveFormChanges : createForm}
+                disabled={isCreating}
+                className="rounded-full bg-orange-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-70"
+              >
+                {isCreating
+                  ? editingFormId
+                    ? "Saving changes..."
+                    : "Creating form..."
+                  : editingFormId
+                    ? "Save changes"
+                    : "Create form"}
+              </button>
+              {editingFormId ? (
+                <button
+                  type="button"
+                  onClick={resetBuilder}
+                  className="rounded-full border border-slate-300 px-5 py-3 font-semibold text-slate-700"
+                >
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {createResult ? (
+            <div className="mt-5 rounded-[1.5rem] bg-slate-50 p-4">
+              {createResult.error ? (
+                <p className="font-medium text-rose-700">{createResult.error}</p>
+              ) : null}
+              {createResult.message ? (
+                <p className="font-medium text-emerald-700">{createResult.message}</p>
+              ) : null}
+              {shareUrl ? (
+                <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-950">Shareable link</p>
+                  <p className="mt-2 break-all">{shareUrl}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+            Forms list
+          </p>
+          <h2 className="mt-2 font-serif text-2xl text-slate-950">
+            Shareable forms
+          </h2>
+          <div className="mt-5 grid gap-3">
+            {forms.map((form) => (
+              <button
+                key={form.id}
+                type="button"
+                onClick={() => setSelectedFormId(form.id)}
+                className={`rounded-[1.5rem] border p-4 text-left ${
+                  selectedForm?.id === form.id
+                    ? "border-orange-300 bg-orange-50"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-950">{form.title}</p>
+                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+                    {form.status}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">{form.description}</p>
+                <p className="mt-3 text-sm text-slate-500">{form.audience}</p>
+                <div className="mt-4">
+                  <span
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      loadFormIntoBuilder(form);
+                    }}
+                    className="inline-flex cursor-pointer rounded-full border border-slate-300 px-3 py-1 text-sm font-medium text-slate-700"
+                  >
+                    Edit form
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+            Form preview
+          </p>
+          <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="font-serif text-2xl text-slate-950">{selectedForm?.title}</h2>
+              <p className="mt-2 text-slate-600">{selectedForm?.description}</p>
+            </div>
+            {selectedForm ? (
+              <Link
+                href={`/forms/${selectedForm.slug}`}
+                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+              >
+                Open public form
+              </Link>
+            ) : null}
+          </div>
+          <div className="mt-5 grid gap-3">
+            {selectedForm?.fields.map((field) => (
+              <div key={field.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-950">{field.label}</p>
+                  <span className="text-sm text-slate-500">{field.type}</span>
+                </div>
+                <p className="mt-2 text-sm text-slate-500">
+                  {field.required ? "Required field" : "Optional field"}
+                </p>
+                {field.options?.length ? (
+                  <p className="mt-2 text-sm text-orange-700">
+                    Options: {field.options.join(", ")}
+                  </p>
+                ) : null}
+                {field.condition ? (
+                  <p className="mt-2 text-sm text-sky-700">
+                    Shows only when `{field.condition.fieldId}` = &quot;{field.condition.equals}
+                    &quot;
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+            Responses
+          </p>
+          <h2 className="mt-2 font-serif text-2xl text-slate-950">
+            Submitted information
+          </h2>
+          <p className="mt-2 text-slate-600">
+            {selectedResponses.length} response(s) collected for this form.
+          </p>
+          <div className="mt-5 space-y-4">
+            {selectedResponses.map((response) => (
+              <div key={response.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                <p className="text-sm text-slate-500">{response.submittedAt}</p>
+                <div className="mt-3 grid gap-3">
+                  {Object.entries(response.answers).map(([key, value]) => (
+                    <div key={key} className="rounded-xl bg-slate-50 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{key}</p>
+                      <p className="mt-1 text-slate-900">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
