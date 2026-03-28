@@ -1,5 +1,7 @@
 import {
   AppData,
+  Attendance,
+  ClassSession,
   InventoryItem,
   InventorySale,
   ProgressCheckIn,
@@ -211,6 +213,7 @@ function mapSessionRow(row: Record<string, unknown>): AppData["sessions"][number
     time: String(row.time ?? ""),
     capacity: Number(row.capacity ?? 0),
     room: String(row.room ?? ""),
+    zoomLink: String(row.zoom_link ?? ""),
   };
 }
 
@@ -789,4 +792,76 @@ export async function upsertSupabaseInventoryItems(items: InventoryItem[]) {
     throw new Error(error.message);
   }
   return data ?? [];
+}
+
+export async function updateSupabaseSessionZoomLink(
+  sessionId: string,
+  input: { zoomLink: string; room?: string },
+) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const updatePayload: Record<string, string> = {
+    zoom_link: input.zoomLink,
+  };
+
+  if (input.room !== undefined) {
+    updatePayload.room = input.room;
+  }
+
+  const { data, error } = await supabase
+    .from("classes_or_sessions")
+    .update(updatePayload)
+    .eq("id", sessionId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return mapSessionRow(data as Record<string, unknown>) as ClassSession;
+}
+
+export async function upsertSupabaseAttendanceEntry(input: {
+  sessionId: string;
+  memberId: string;
+  status: Attendance["status"];
+}) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("attendance")
+    .select("*")
+    .eq("session_id", input.sessionId)
+    .eq("member_id", input.memberId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const payload = {
+    id: existing?.id ?? `attendance-${input.sessionId}-${input.memberId}`,
+    session_id: input.sessionId,
+    member_id: input.memberId,
+    status: input.status,
+  };
+
+  const operation = existing
+    ? supabase.from("attendance").update({ status: input.status }).eq("id", existing.id).select("*").single()
+    : supabase.from("attendance").insert(payload).select("*").single();
+
+  const { data, error } = await operation;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return mapAttendanceRow(data as Record<string, unknown>) as Attendance;
 }

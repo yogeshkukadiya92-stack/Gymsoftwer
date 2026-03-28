@@ -447,6 +447,7 @@ export const mockData: AppData = {
       time: "07:00 AM",
       capacity: 30,
       room: "Zoom Room A",
+      zoomLink: "https://zoom.us/j/12345678901",
     },
     {
       id: "session-2",
@@ -456,6 +457,7 @@ export const mockData: AppData = {
       time: "07:00 AM",
       capacity: 30,
       room: "Zoom Room A",
+      zoomLink: "https://zoom.us/j/12345678902",
     },
     {
       id: "session-3",
@@ -465,6 +467,7 @@ export const mockData: AppData = {
       time: "07:00 AM",
       capacity: 30,
       room: "Zoom Room B",
+      zoomLink: "https://zoom.us/j/12345678903",
     },
     {
       id: "session-4",
@@ -474,6 +477,7 @@ export const mockData: AppData = {
       time: "07:00 AM",
       capacity: 24,
       room: "Zoom Room B",
+      zoomLink: "https://zoom.us/j/12345678904",
     },
     {
       id: "session-5",
@@ -483,6 +487,7 @@ export const mockData: AppData = {
       time: "09:00 AM",
       capacity: 30,
       room: "Zoom Room A",
+      zoomLink: "https://zoom.us/j/12345678905",
     },
   ],
   attendance: [

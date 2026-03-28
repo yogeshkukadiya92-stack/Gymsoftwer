@@ -138,6 +138,7 @@ export type ClassSession = {
   time: string;
   capacity: number;
   room: string;
+  zoomLink?: string;
 };
 
 export type Attendance = {

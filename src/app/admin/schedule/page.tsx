@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
+import { SessionZoomManager } from "@/components/session-zoom-manager";
 import { WorkshopAttendanceManager } from "@/components/workshop-attendance-manager";
 import { adminNavLinks } from "@/lib/admin-nav";
 import { getAppData } from "@/lib/data";
@@ -54,6 +55,10 @@ export default async function AdminSchedulePage() {
       </div>
 
       <div className="mt-6">
+        <SessionZoomManager sessions={data.sessions} />
+      </div>
+
+      <div className="mt-6">
         <WorkshopAttendanceManager
           sessions={data.sessions}
           attendance={data.attendance}
@@ -80,6 +85,9 @@ export default async function AdminSchedulePage() {
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
                     {activeCount}/{session.capacity} registered | {session.room}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {session.zoomLink ? "Zoom link ready for members" : "Zoom link not added yet"}
                   </p>
                 </div>
               );

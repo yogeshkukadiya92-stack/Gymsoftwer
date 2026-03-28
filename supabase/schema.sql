@@ -95,7 +95,8 @@ create table if not exists classes_or_sessions (
   day text not null,
   time text not null,
   capacity integer not null,
-  room text not null
+  room text not null,
+  zoom_link text
 );
 
 create table if not exists attendance (

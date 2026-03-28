@@ -8,12 +8,16 @@ import {
   insertSupabaseProgressPhoto,
   recordSupabaseInventorySale,
   restockSupabaseInventoryItem,
+  updateSupabaseSessionZoomLink,
+  upsertSupabaseAttendanceEntry,
   upsertSupabaseInventoryItems,
   upsertSupabaseProfiles,
   updateSupabaseProgressCheckIn,
 } from "@/lib/supabase/persistence";
 import {
   AppData,
+  Attendance,
+  ClassSession,
   InventoryItem,
   InventorySale,
   Profile,
@@ -40,6 +44,10 @@ function normalizeAppData(data: AppData): AppData {
     inventorySales: data.inventorySales ?? [],
     progressCheckIns: data.progressCheckIns ?? [],
     progressPhotos: data.progressPhotos ?? [],
+    sessions: (data.sessions ?? []).map((session) => ({
+      ...session,
+      zoomLink: session.zoomLink ?? "",
+    })),
   };
 }
 
@@ -376,4 +384,81 @@ export async function importInventoryItemsToAppData(items: InventoryItem[]) {
     updated,
     totalItems: nextStore.inventoryItems.length,
   };
+}
+
+export async function updateSessionZoomLink(
+  sessionId: string,
+  input: { zoomLink: string; room?: string },
+) {
+  const supabaseSession = await updateSupabaseSessionZoomLink(sessionId, input);
+
+  if (supabaseSession) {
+    return supabaseSession;
+  }
+
+  const store = await readAppDataStore();
+  const existing = store.sessions.find((session) => session.id === sessionId);
+
+  if (!existing) {
+    throw new Error("Session not found.");
+  }
+
+  const updatedSession: ClassSession = {
+    ...existing,
+    room: input.room ?? existing.room,
+    zoomLink: input.zoomLink,
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    sessions: store.sessions.map((session) =>
+      session.id === sessionId ? updatedSession : session,
+    ),
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return updatedSession;
+}
+
+export async function markAttendanceCheckedIn(input: {
+  sessionId: string;
+  memberId: string;
+}) {
+  const supabaseAttendance = await upsertSupabaseAttendanceEntry({
+    sessionId: input.sessionId,
+    memberId: input.memberId,
+    status: "Checked In",
+  });
+
+  if (supabaseAttendance) {
+    return supabaseAttendance;
+  }
+
+  const store = await readAppDataStore();
+  const existing = store.attendance.find(
+    (entry) => entry.sessionId === input.sessionId && entry.memberId === input.memberId,
+  );
+
+  const updatedEntry: Attendance = existing
+    ? { ...existing, status: "Checked In" }
+    : {
+        id: `attendance-${input.sessionId}-${input.memberId}`,
+        sessionId: input.sessionId,
+        memberId: input.memberId,
+        status: "Checked In",
+      };
+
+  const nextStore: AppData = {
+    ...store,
+    attendance: existing
+      ? store.attendance.map((entry) =>
+          entry.id === existing.id ? updatedEntry : entry,
+        )
+      : [updatedEntry, ...store.attendance],
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return updatedEntry;
 }
