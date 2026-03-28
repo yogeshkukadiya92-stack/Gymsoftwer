@@ -1,4 +1,9 @@
-import { createManagedUser, requireRole } from "@/lib/auth";
+import {
+  createManagedUser,
+  deleteManagedUser,
+  requireRole,
+  updateManagedUser,
+} from "@/lib/auth";
 import { getAppData } from "@/lib/data";
 
 export async function GET() {
@@ -48,6 +53,72 @@ export async function POST(request: Request) {
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "User creation failed." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  await requireRole("admin");
+
+  const body = (await request.json()) as {
+    id?: string;
+    currentEmail?: string;
+    fullName?: string;
+    email?: string;
+    password?: string;
+    role?: "member" | "trainer" | "admin";
+    phone?: string;
+    fitnessGoal?: string;
+    branch?: string;
+  };
+
+  if (!body.id?.trim() || !body.currentEmail?.trim() || !body.fullName?.trim() || !body.email?.trim() || !body.role) {
+    return Response.json(
+      { error: "Id, current email, full name, email, and role are required." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const user = await updateManagedUser({
+      id: body.id,
+      currentEmail: body.currentEmail,
+      fullName: body.fullName.trim(),
+      email: body.email.trim(),
+      password: body.password,
+      role: body.role,
+      phone: body.phone?.trim(),
+      fitnessGoal: body.fitnessGoal?.trim(),
+      branch: body.branch?.trim(),
+    });
+
+    return Response.json({
+      message: "User updated successfully.",
+      user,
+    });
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "User update failed." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  await requireRole("admin");
+  const body = (await request.json()) as { id?: string; email?: string };
+
+  if (!body.id?.trim() || !body.email?.trim()) {
+    return Response.json({ error: "Id and email are required." }, { status: 400 });
+  }
+
+  try {
+    await deleteManagedUser({ id: body.id, email: body.email });
+    return Response.json({ message: "User deleted successfully.", id: body.id });
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "User delete failed." },
       { status: 400 },
     );
   }

@@ -95,6 +95,12 @@ export function SignInForm() {
           Create account
         </Link>
       </p>
+      <p className="mt-3 text-sm text-slate-400">
+        Forgot password?{" "}
+        <Link href="/forgot-password" className="font-semibold text-orange-200">
+          Reset here
+        </Link>
+      </p>
     </div>
   );
 }

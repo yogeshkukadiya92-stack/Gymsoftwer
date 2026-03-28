@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/badge";
+import { LogoutButton } from "@/components/logout-button";
 import { appConfig, hasSupabaseEnv } from "@/lib/env";
 import { UserRole } from "@/lib/types";
 
@@ -50,6 +51,7 @@ export function AppShell({
                 {link.label}
               </Link>
             ))}
+            <LogoutButton />
           </div>
         </div>
         {!hasSupabaseEnv ? (

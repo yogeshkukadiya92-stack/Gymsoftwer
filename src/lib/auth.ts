@@ -153,3 +153,100 @@ export async function createManagedUser(input: {
     role: input.role,
   };
 }
+
+async function findAuthUserByEmail(email: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const { data, error } = await supabase.auth.admin.listUsers();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.users.find(
+    (user) => user.email?.trim().toLowerCase() === email.trim().toLowerCase(),
+  );
+}
+
+export async function updateManagedUser(input: {
+  id: string;
+  currentEmail: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+  phone?: string;
+  fitnessGoal?: string;
+  branch?: string;
+  password?: string;
+}) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const authUser = await findAuthUserByEmail(input.currentEmail);
+
+  if (authUser) {
+    const { error: authError } = await supabase.auth.admin.updateUserById(authUser.id, {
+      email: input.email,
+      password: input.password?.trim() ? input.password : undefined,
+    });
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({
+      full_name: input.fullName,
+      email: input.email,
+      role: input.role,
+      phone: input.phone ?? "",
+      fitness_goal: input.fitnessGoal ?? "",
+      branch: input.branch ?? "",
+    })
+    .eq("id", input.id);
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  return {
+    id: input.id,
+    email: input.email,
+    role: input.role,
+  };
+}
+
+export async function deleteManagedUser(input: { id: string; email: string }) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const authUser = await findAuthUserByEmail(input.email);
+
+  if (authUser) {
+    const { error: authError } = await supabase.auth.admin.deleteUser(authUser.id);
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+  }
+
+  const { error: profileError } = await supabase.from("profiles").delete().eq("id", input.id);
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  return { id: input.id };
+}
