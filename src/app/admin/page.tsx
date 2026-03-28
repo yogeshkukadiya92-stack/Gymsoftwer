@@ -1,11 +1,14 @@
+import { AdminOverviewSearch } from "@/components/admin-overview-search";
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
 import { getDashboardData } from "@/lib/data";
+import { getAllForms } from "@/lib/forms-store";
 
 export default async function AdminDashboardPage() {
   const { data, activeMembers, activePlans } = await getDashboardData("admin");
+  const forms = await getAllForms();
 
   return (
     <AppShell
@@ -41,42 +44,48 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <SectionCard eyebrow="Today" title="Operational focus">
-          <div className="space-y-4 text-slate-700">
-            <div className="rounded-[1.5rem] bg-slate-50 p-4">
-              <p className="font-semibold text-slate-950">Review expiring memberships</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Payment is intentionally deferred, so staff-only tracking needs to stay visible.
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] bg-slate-50 p-4">
-              <p className="font-semibold text-slate-950">Assign plans after assessment</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Program templates can be attached to members immediately after onboarding.
-              </p>
-            </div>
-          </div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <SectionCard eyebrow="Search" title="Global overview search">
+          <AdminOverviewSearch data={data} forms={forms} pages={adminNavLinks} />
         </SectionCard>
 
-        <SectionCard eyebrow="Roster" title="Member snapshot">
-          <div className="space-y-3">
-            {data.profiles
-              .filter((profile) => profile.role === "member")
-              .map((profile) => (
-                <div
-                  key={profile.id}
-                  className="flex flex-col gap-2 rounded-[1.5rem] border border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-950">{profile.fullName}</p>
-                    <p className="text-sm text-slate-600">{profile.fitnessGoal}</p>
+        <div className="grid gap-6">
+          <SectionCard eyebrow="Today" title="Operational focus">
+            <div className="space-y-4 text-slate-700">
+              <div className="rounded-[1.5rem] bg-slate-50 p-4">
+                <p className="font-semibold text-slate-950">Review expiring memberships</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Payment is intentionally deferred, so staff-only tracking needs to stay visible.
+                </p>
+              </div>
+              <div className="rounded-[1.5rem] bg-slate-50 p-4">
+                <p className="font-semibold text-slate-950">Assign plans after assessment</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Program templates can be attached to members immediately after onboarding.
+                </p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard eyebrow="Roster" title="Member snapshot">
+            <div className="space-y-3">
+              {data.profiles
+                .filter((profile) => profile.role === "member")
+                .map((profile) => (
+                  <div
+                    key={profile.id}
+                    className="flex flex-col gap-2 rounded-[1.5rem] border border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-950">{profile.fullName}</p>
+                      <p className="text-sm text-slate-600">{profile.fitnessGoal}</p>
+                    </div>
+                    <p className="text-sm text-slate-500">{profile.branch}</p>
                   </div>
-                  <p className="text-sm text-slate-500">{profile.branch}</p>
-                </div>
-              ))}
-          </div>
-        </SectionCard>
+                ))}
+            </div>
+          </SectionCard>
+        </div>
       </div>
     </AppShell>
   );
