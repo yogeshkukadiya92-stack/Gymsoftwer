@@ -535,6 +535,71 @@ export async function updateSupabaseGymBranch(id: string, input: Omit<GymBranch,
   return branch;
 }
 
+export async function createSupabaseExercise(input: Omit<AppData["exercises"][number], "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const exercise = {
+    id: `exercise-${crypto.randomUUID()}`,
+    ...input,
+  };
+
+  const { error } = await supabase.from("exercises").insert({
+    id: exercise.id,
+    name: exercise.name,
+    category: exercise.category,
+    difficulty: exercise.difficulty,
+    primary_muscle: exercise.primaryMuscle,
+    equipment: exercise.equipment,
+    media_type: exercise.mediaType,
+    media_url: exercise.mediaUrl,
+    cues: exercise.cues,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return exercise;
+}
+
+export async function updateSupabaseExercise(
+  id: string,
+  input: Omit<AppData["exercises"][number], "id">,
+) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const exercise = {
+    id,
+    ...input,
+  };
+
+  const { error } = await supabase
+    .from("exercises")
+    .update({
+      name: exercise.name,
+      category: exercise.category,
+      difficulty: exercise.difficulty,
+      primary_muscle: exercise.primaryMuscle,
+      equipment: exercise.equipment,
+      media_type: exercise.mediaType,
+      media_url: exercise.mediaUrl,
+      cues: exercise.cues,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return exercise;
+}
+
 export async function getSupabaseIntegrationApiKeys() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {

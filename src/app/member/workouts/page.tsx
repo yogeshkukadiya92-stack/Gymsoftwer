@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { getDashboardData } from "@/lib/data";
+import Link from "next/link";
 
 const navLinks = [
   { href: "/member", label: "Overview" },
@@ -38,14 +39,12 @@ export default async function MemberWorkoutsPage() {
                         {item.sets} sets, {item.reps} reps, {item.restSeconds}s rest
                       </p>
                     </div>
-                    <a
-                      href={exercise?.mediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <Link
+                      href={`/member/workouts/${exercise?.id}`}
                       className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
                     >
-                      Open {exercise?.mediaType}
-                    </a>
+                      See exercise
+                    </Link>
                   </div>
                   <p className="mt-4 text-slate-700">{item.notes}</p>
                   <div className="mt-4 flex flex-wrap gap-2">

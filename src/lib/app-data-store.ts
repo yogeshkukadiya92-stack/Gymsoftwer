@@ -4,12 +4,14 @@ import path from "node:path";
 import { mockData } from "@/lib/mock-data";
 import {
   createSupabaseGymBranch,
+  createSupabaseExercise,
   insertSupabaseInventoryItem,
   insertSupabaseProgressCheckIn,
   insertSupabaseProgressPhoto,
   recordSupabaseInventorySale,
   restockSupabaseInventoryItem,
   updateSupabaseSessionZoomLink,
+  updateSupabaseExercise,
   updateSupabaseGymBranch,
   upsertSupabaseAttendanceEntry,
   upsertSupabaseInventoryItems,
@@ -138,6 +140,70 @@ export async function editGymBranch(id: string, input: Omit<GymBranch, "id">) {
   await writeAppDataStore(nextStore);
 
   return branch;
+}
+
+export async function createExercise(input: Omit<AppData["exercises"][number], "id">) {
+  try {
+    const supabaseExercise = await createSupabaseExercise(input);
+
+    if (supabaseExercise) {
+      return supabaseExercise;
+    }
+  } catch {
+    // Fall back to local store if the live exercises table write is not available.
+  }
+
+  const store = await readAppDataStore();
+  const exercise = {
+    id: `exercise-${crypto.randomUUID()}`,
+    ...input,
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    exercises: [exercise, ...store.exercises],
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return exercise;
+}
+
+export async function editExercise(
+  id: string,
+  input: Omit<AppData["exercises"][number], "id">,
+) {
+  try {
+    const supabaseExercise = await updateSupabaseExercise(id, input);
+
+    if (supabaseExercise) {
+      return supabaseExercise;
+    }
+  } catch {
+    // Fall back to local store if the live exercises table write is not available.
+  }
+
+  const store = await readAppDataStore();
+  const existing = store.exercises.find((exercise) => exercise.id === id);
+
+  if (!existing) {
+    throw new Error("Exercise not found.");
+  }
+
+  const exercise = {
+    ...existing,
+    ...input,
+    id,
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    exercises: store.exercises.map((item) => (item.id === id ? exercise : item)),
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return exercise;
 }
 
 export async function importMembersToAppData(members: Profile[]) {
