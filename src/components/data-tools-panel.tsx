@@ -72,13 +72,13 @@ export function DataToolsPanel() {
           <div className="mt-6 flex flex-wrap gap-3">
             <a
               href="/api/admin/members/export"
-              className="rounded-full bg-slate-950 px-5 py-3 font-semibold text-white"
+              className="rounded-full border border-orange-200 bg-orange-50 px-5 py-3 font-semibold text-orange-800 transition hover:border-orange-300 hover:bg-orange-100"
             >
               Export members Excel
             </a>
             <a
               href="/api/admin/members/template"
-              className="rounded-full border border-slate-300 px-5 py-3 font-semibold text-slate-900"
+              className="rounded-full border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 transition hover:border-orange-300 hover:bg-orange-50"
             >
               Download members template
             </a>
@@ -175,13 +175,13 @@ export function DataToolsPanel() {
         <div className="mt-6 flex flex-wrap gap-3">
           <a
             href="/api/admin/export"
-            className="rounded-full bg-slate-950 px-5 py-3 font-semibold text-white"
+            className="rounded-full border border-orange-200 bg-orange-50 px-5 py-3 font-semibold text-orange-800 transition hover:border-orange-300 hover:bg-orange-100"
           >
             Export live workbook
           </a>
           <a
             href="/api/admin/template"
-            className="rounded-full border border-slate-300 px-5 py-3 font-semibold text-slate-900"
+            className="rounded-full border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 transition hover:border-orange-300 hover:bg-orange-50"
           >
             Download template
           </a>
