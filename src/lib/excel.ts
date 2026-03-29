@@ -608,6 +608,100 @@ export function buildBillingWorkbook(data: AppData) {
   return workbook;
 }
 
+export function buildReportsWorkbook(snapshot: {
+  members: Array<{ id: string; fullName: string; email: string; branch: string; joinedOn: string }>;
+  memberGrowth: Array<{ month: string; count: number }>;
+  presentCount: number;
+  absentCount: number;
+  bookedCount: number;
+  collectedRevenue: number;
+  outstandingRevenue: number;
+  overdueInvoices: number;
+  estimatedInventoryMargin: number;
+  topFormResponses: Array<{ id: string; title: string; responses: number }>;
+  trainerRows: Array<{ id: string; fullName: string; activePlans: number; classes: number }>;
+  leads: Array<{ id: string; fullName: string; source: string; status: string; assignedTo: string }>;
+  leadStats: { total: number; converted: number; activeTrials: number; new: number };
+  avgDietAdherence: number;
+}) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet([
+      {
+        total_members: snapshot.members.length,
+        present_count: snapshot.presentCount,
+        booked_count: snapshot.bookedCount,
+        absent_count: snapshot.absentCount,
+        collected_revenue_inr: snapshot.collectedRevenue,
+        outstanding_revenue_inr: snapshot.outstandingRevenue,
+        overdue_invoices: snapshot.overdueInvoices,
+        inventory_margin_inr: snapshot.estimatedInventoryMargin,
+        lead_total: snapshot.leadStats.total,
+        lead_converted: snapshot.leadStats.converted,
+        lead_trial_booked: snapshot.leadStats.activeTrials,
+        lead_new: snapshot.leadStats.new,
+        avg_diet_adherence_percent: Math.round(snapshot.avgDietAdherence),
+      },
+    ]),
+    "overview",
+  );
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(snapshot.memberGrowth), "member_growth");
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      snapshot.trainerRows.map((trainer) => ({
+        id: trainer.id,
+        full_name: trainer.fullName,
+        active_plans: trainer.activePlans,
+        classes: trainer.classes,
+      })),
+    ),
+    "trainer_workload",
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      snapshot.topFormResponses.map((form) => ({
+        id: form.id,
+        title: form.title,
+        responses: form.responses,
+      })),
+    ),
+    "forms",
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      snapshot.leads.map((lead) => ({
+        id: lead.id,
+        full_name: lead.fullName,
+        source: lead.source,
+        status: lead.status,
+        assigned_to: lead.assignedTo,
+      })),
+    ),
+    "leads",
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      snapshot.members.map((member) => ({
+        id: member.id,
+        full_name: member.fullName,
+        email: member.email,
+        branch: member.branch,
+        joined_on: member.joinedOn,
+      })),
+    ),
+    "members",
+  );
+
+  return workbook;
+}
+
 export function parseMembersWorkbook(buffer: ArrayBuffer) {
   const workbook = XLSX.read(buffer, { type: "array" });
 
