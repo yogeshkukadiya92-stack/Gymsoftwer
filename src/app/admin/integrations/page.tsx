@@ -11,7 +11,7 @@ export default async function AdminIntegrationsPage() {
     <AppShell
       role="admin"
       title="Integrations"
-      subtitle="API key generate karo ane app nu data secure rite biji systems sathe connect karo."
+      subtitle="Generate API keys and securely connect app data to external systems."
       navLinks={adminNavLinks}
     >
       <SectionCard eyebrow="API access" title="Integration keys">

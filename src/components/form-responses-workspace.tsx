@@ -61,7 +61,7 @@ export function FormResponsesWorkspace({
           Form selector
         </p>
         <h2 className="mt-2 font-serif text-2xl text-slate-950">
-          Koi pan form select karo
+          Select any form
         </h2>
         <div className="mt-5 grid gap-3">
           {formsState.map((form) => {
@@ -98,7 +98,7 @@ export function FormResponsesWorkspace({
             Create new form
           </p>
           <h3 className="mt-2 font-serif text-xl text-slate-950">
-            Form response page mathi j navo form banao
+            Create a new form directly from the responses page
           </h3>
           <div className="mt-4 grid gap-3">
             <input
@@ -298,8 +298,7 @@ export function FormResponsesWorkspace({
               </table>
             ) : (
               <div className="px-6 py-10 text-slate-600">
-                Aa form mate haju responses nathi. Bijo form select karo athva public form thi
-                data collect karo.
+                No responses are available for this form yet. Select another form or collect data through the public form link.
               </div>
             )}
           </div>

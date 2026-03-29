@@ -86,7 +86,7 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
           <div className="mt-8 rounded-[1.5rem] bg-emerald-50 p-6 text-emerald-800">
             <p className="text-lg font-semibold">Form submitted</p>
             <p className="mt-2">
-              Tamaro data save thai gayo chhe ane admin side na form responses page ma dekhashe.
+              Your response has been saved and will appear on the admin form responses page.
             </p>
           </div>
         ) : (

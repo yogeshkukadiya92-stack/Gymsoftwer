@@ -209,9 +209,9 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Bulk lead upload</p>
-            <h3 className="mt-2 font-serif text-2xl text-slate-950">Excel thi ghana leads add karo</h3>
+            <h3 className="mt-2 font-serif text-2xl text-slate-950">Add multiple leads from Excel</h3>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-              Sample file download karo, leads fill karo, ane ek sathe CRM ma upload karo.
+              Download the sample file, fill in your leads, and upload them to the CRM in one go.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

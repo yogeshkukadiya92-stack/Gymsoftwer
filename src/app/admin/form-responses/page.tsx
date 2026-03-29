@@ -24,8 +24,7 @@ export default async function AdminFormResponsesPage() {
       <div className="mt-6">
         <SectionCard eyebrow="Note" title="Current response view">
           <p className="text-slate-700">
-            Aa page live stored forms ane submitted responses batave chhe, etle public form
-            submit thay pachhi ahiyan data table ma avse.
+            This page shows live stored forms and submitted responses, so public form submissions will appear here automatically.
           </p>
         </SectionCard>
       </div>

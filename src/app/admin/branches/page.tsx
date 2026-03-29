@@ -13,7 +13,7 @@ export default async function AdminBranchesPage() {
     <AppShell
       role="admin"
       title="Branches"
-      subtitle="Multiple gym branches add karo, edit karo, ane branch-wise members plus visit activity manage karo."
+      subtitle="Add and edit multiple gym branches, and manage branch-wise members and visit activity."
       navLinks={adminNavLinks}
     >
       <SectionCard eyebrow="Multi branch" title="Branch manager">

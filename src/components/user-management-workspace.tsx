@@ -233,7 +233,7 @@ export function UserManagementWorkspace({
           <div>
             <h3 className="font-serif text-2xl text-slate-950">Bulk user tools</h3>
             <p className="mt-2 text-sm text-slate-500">
-              Excel thi multiple admin, trainer, ane member users add, update, export, ane sample file download kari shako.
+              Add, update, export, and import multiple admin, trainer, and member users from Excel.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -474,7 +474,7 @@ export function UserManagementWorkspace({
                   ))
                 ) : (
                   <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">
-                    Aa user mate cross-branch visit data haju nathi. Home branch data upar dekhay chhe.
+                    No cross-branch visit history is available for this user yet. Their home branch is shown above.
                   </div>
                 )}
               </div>

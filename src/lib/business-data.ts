@@ -199,7 +199,7 @@ export const starterCustomCampaigns: CustomWhatsAppCampaign[] = [
     category: "Custom",
     scheduledFor: "2026-03-29 08:00",
     message:
-      "Hi team, tomorrow thi navi week start thay chhe. Please confirm your class attendance and keep your nutrition on point.",
+      "Hi team, a new week starts tomorrow. Please confirm your class attendance and keep your nutrition on point.",
     recipients: [
       {
         id: "member-1",

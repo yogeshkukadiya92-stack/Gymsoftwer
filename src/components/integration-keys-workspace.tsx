@@ -109,7 +109,7 @@ export function IntegrationKeysWorkspace({
         >
           <h3 className="font-serif text-2xl text-slate-950">Create integration API key</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Aa key thi tame external app, Google Apps Script, Zapier, athva custom dashboard mathi data fetch kari shakso.
+            Use this key to fetch app data from an external app, Google Apps Script, Zapier, or a custom dashboard.
           </p>
 
           <div className="mt-4 grid gap-4">
@@ -162,7 +162,7 @@ export function IntegrationKeysWorkspace({
                 {plainKey}
               </p>
               <p className="mt-2 text-xs text-orange-800">
-                Aa plain key pachhi fari nahi dekhay. Secure jagya par save karjo.
+                This plain key will not be shown again. Save it somewhere secure.
               </p>
             </div>
           ) : null}
@@ -175,7 +175,7 @@ export function IntegrationKeysWorkspace({
               `GET /api/integrations/data?datasets=profiles,memberships`
             </p>
             <div className="mt-4 rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-700">
-              <p>Header use karo: `x-api-key: YOUR_KEY`</p>
+              <p>Use this header: `x-api-key: YOUR_KEY`</p>
               <p className="mt-2">Athva: `Authorization: Bearer YOUR_KEY`</p>
             </div>
           </div>
@@ -213,7 +213,7 @@ export function IntegrationKeysWorkspace({
               ))}
               {keys.length === 0 ? (
                 <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">
-                  Haju koi integration API key create nathi kari.
+                  No integration API keys have been created yet.
                 </div>
               ) : null}
             </div>

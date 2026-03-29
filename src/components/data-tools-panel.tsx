@@ -63,10 +63,10 @@ export function DataToolsPanel() {
             Bulk member import
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Excel thi multiple members add karo
+            Add multiple members from Excel
           </h2>
           <p className="mt-3 text-slate-700">
-            Member-specific template download karo ane ek sathe ghana members upload karo.
+            Download the member template and upload many members at once.
             Required columns: `full_name`, `email`, `phone`.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">

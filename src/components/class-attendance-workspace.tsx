@@ -226,7 +226,7 @@ export function ClassAttendanceWorkspace({
             Filters and Excel
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Time wise filter ane import-export
+            Time-based filters and import/export
           </h2>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <select
@@ -352,7 +352,7 @@ export function ClassAttendanceWorkspace({
             Add new class
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Yoga thi lai ne koi pan class add karo
+            Add any class, from yoga to workshops
           </h2>
           <div className="mt-5 grid gap-4">
             <input
@@ -492,7 +492,7 @@ export function ClassAttendanceWorkspace({
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                Current filters mate koi class mali nathi. Filter reset karo athva navi class add karo.
+                No classes match the current filters. Reset the filters or add a new class.
               </div>
             )}
           </div>
@@ -511,7 +511,7 @@ export function ClassAttendanceWorkspace({
           <p className="mt-2 text-sm text-slate-500">
             Selected class na actual attendees niche dekhashe.
             {!availableClassIds.has(selectedClass?.id ?? "")
-              ? " Aa class current filters ma nathi pan selected state ma chhe."
+              ? " This class does not match the current filters but is still selected."
               : ""}
           </p>
 
@@ -573,8 +573,7 @@ export function ClassAttendanceWorkspace({
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                Aa class mate haju attendee add thayela nathi. Attendance Excel import kari shako
-                athva selected class mate registrations pachi ahi list dekhashe.
+                No attendees have been added for this class yet. You can import attendance from Excel, or this list will populate after registrations are added.
               </div>
             )}
           </div>

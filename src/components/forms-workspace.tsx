@@ -238,8 +238,8 @@ export function FormsWorkspace({
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
             {editingFormId
-              ? "Selected form edit karo"
-              : "Google Form jevu advanced custom form banao"}
+              ? "Edit selected form"
+              : "Build an advanced custom form similar to Google Forms"}
           </h2>
           <div className="mt-5 grid gap-4">
             <input
@@ -373,7 +373,7 @@ export function FormsWorkspace({
                           )
                         }
                         className="rounded-2xl border border-slate-300 px-4 py-3"
-                        placeholder="Options comma thi lakhvo. Example: Beginner, Intermediate, Advanced"
+                        placeholder="Enter options separated by commas. Example: Beginner, Intermediate, Advanced"
                       />
                     ) : null}
 
