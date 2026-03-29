@@ -2,7 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
-import { starterDietPlans, starterLeads } from "@/lib/business-data";
+import { getDietPlans, getLeadRecords } from "@/lib/business-data-store";
 import { getAppData } from "@/lib/data";
 import { getAllForms, getAllFormResponses } from "@/lib/forms-store";
 
@@ -24,10 +24,12 @@ function getMemberGrowthRows(joinDates: string[]) {
 }
 
 export default async function AdminReportsPage() {
-  const [data, forms, responses] = await Promise.all([
+  const [data, forms, responses, starterDietPlans, starterLeads] = await Promise.all([
     getAppData(),
     getAllForms(),
     getAllFormResponses(),
+    getDietPlans(),
+    getLeadRecords(),
   ]);
 
   const members = data.profiles.filter((profile) => profile.role === "member");
@@ -78,7 +80,10 @@ export default async function AdminReportsPage() {
   };
 
   const avgDietAdherence =
-    starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) / starterDietPlans.length;
+    starterDietPlans.length > 0
+      ? starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) /
+        starterDietPlans.length
+      : 0;
 
   return (
     <AppShell

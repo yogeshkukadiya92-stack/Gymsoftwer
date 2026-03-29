@@ -3,11 +3,14 @@ import { DietPlannerWorkspace } from "@/components/diet-planner-workspace";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
-import { starterDietPlans } from "@/lib/business-data";
+import { getDietPlans } from "@/lib/business-data-store";
 
-export default function AdminDietPlannerPage() {
+export default async function AdminDietPlannerPage() {
+  const starterDietPlans = await getDietPlans();
   const avgAdherence =
-    starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) / starterDietPlans.length;
+    starterDietPlans.length > 0
+      ? starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) / starterDietPlans.length
+      : 0;
 
   return (
     <AppShell
