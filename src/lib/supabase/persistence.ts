@@ -25,6 +25,7 @@ import {
   LeadRecord,
   TrainerClientNote,
 } from "@/lib/business-data";
+import { IntegrationApiKey } from "@/lib/integrations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function mapFormRow(row: {
@@ -275,6 +276,19 @@ function mapGymBranchRow(row: Record<string, unknown>): GymBranch {
   };
 }
 
+function mapIntegrationApiKeyRow(row: Record<string, unknown>): IntegrationApiKey {
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    keyPrefix: String(row.key_prefix ?? ""),
+    keyHash: String(row.key_hash ?? ""),
+    scopes: Array.isArray(row.scopes) ? row.scopes.map((item) => String(item)) as IntegrationApiKey["scopes"] : [],
+    status: (row.status ?? "active") as IntegrationApiKey["status"],
+    createdAt: String(row.created_at ?? ""),
+    lastUsedAt: String(row.last_used_at ?? ""),
+  };
+}
+
 function mapDietPlanRow(row: Record<string, unknown>): DietPlanRecord {
   const meals = Array.isArray(row.meals) ? row.meals : [];
 
@@ -519,6 +533,86 @@ export async function updateSupabaseGymBranch(id: string, input: Omit<GymBranch,
   }
 
   return branch;
+}
+
+export async function getSupabaseIntegrationApiKeys() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("integration_api_keys")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return null;
+  }
+
+  return (data ?? []).map((row) => mapIntegrationApiKeyRow(row as Record<string, unknown>));
+}
+
+export async function createSupabaseIntegrationApiKey(key: IntegrationApiKey) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("integration_api_keys").insert({
+    id: key.id,
+    name: key.name,
+    key_prefix: key.keyPrefix,
+    key_hash: key.keyHash,
+    scopes: key.scopes,
+    status: key.status,
+    created_at: key.createdAt,
+    last_used_at: key.lastUsedAt || null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return key;
+}
+
+export async function revokeSupabaseIntegrationApiKey(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase
+    .from("integration_api_keys")
+    .update({ status: "revoked" })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const keys = await getSupabaseIntegrationApiKeys();
+  return keys?.find((item) => item.id === id) ?? null;
+}
+
+export async function touchSupabaseIntegrationApiKey(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const lastUsedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("integration_api_keys")
+    .update({ last_used_at: lastUsedAt })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return lastUsedAt;
 }
 
 export async function getSupabaseFormsStore(): Promise<FormsStore | null> {

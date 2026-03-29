@@ -19,6 +19,17 @@ create table if not exists gym_branches (
   kind text not null check (kind in ('Physical', 'Online'))
 );
 
+create table if not exists integration_api_keys (
+  id text primary key,
+  name text not null,
+  key_prefix text not null,
+  key_hash text not null unique,
+  scopes jsonb not null default '[]'::jsonb,
+  status text not null check (status in ('active', 'revoked')),
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
 create table if not exists memberships (
   id text primary key,
   member_id text not null references profiles(id) on delete cascade,
