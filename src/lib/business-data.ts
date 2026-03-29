@@ -34,6 +34,30 @@ export type DietPlanRecord = {
   updatedOn: string;
 };
 
+export type CustomWhatsAppCampaign = {
+  id: string;
+  title: string;
+  category: "Custom";
+  scheduledFor: string;
+  message: string;
+  recipients: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    note: string;
+  }>;
+};
+
+export type TrainerClientNote = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  trainerName: string;
+  note: string;
+  focusArea: string;
+  updatedOn: string;
+};
+
 export const starterLeads: LeadRecord[] = [
   {
     id: "lead-1",
@@ -165,5 +189,51 @@ export const starterDietPlans: DietPlanRecord[] = [
         items: ["Khichdi", "Paneer salad"],
       },
     ],
+  },
+];
+
+export const starterCustomCampaigns: CustomWhatsAppCampaign[] = [
+  {
+    id: "campaign-1",
+    title: "Sunday motivation push",
+    category: "Custom",
+    scheduledFor: "2026-03-29 08:00",
+    message:
+      "Hi team, tomorrow thi navi week start thay chhe. Please confirm your class attendance and keep your nutrition on point.",
+    recipients: [
+      {
+        id: "member-1",
+        name: "Aarav Mehta",
+        phone: "+91 98765 43210",
+        note: "Strength batch member",
+      },
+      {
+        id: "member-2",
+        name: "Diya Patel",
+        phone: "+91 98765 45555",
+        note: "Workshop monthly client",
+      },
+    ],
+  },
+];
+
+export const starterTrainerNotes: TrainerClientNote[] = [
+  {
+    id: "trainer-note-1",
+    memberId: "member-1",
+    memberName: "Aarav Mehta",
+    trainerName: "Naina Kapoor",
+    focusArea: "Lower body strength",
+    note: "Squat depth improving. Next week increase top set only if recovery stays high.",
+    updatedOn: "2026-03-28",
+  },
+  {
+    id: "trainer-note-2",
+    memberId: "member-2",
+    memberName: "Diya Patel",
+    trainerName: "Yogesh Kukadiya",
+    focusArea: "Fat loss consistency",
+    note: "Attendance is good. Needs stronger sleep routine and protein consistency.",
+    updatedOn: "2026-03-28",
   },
 ];

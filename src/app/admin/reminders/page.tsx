@@ -3,18 +3,20 @@ import { RemindersWorkspace } from "@/components/reminders-workspace";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
+import { getCustomCampaigns } from "@/lib/business-data-store";
 import { getAppData } from "@/lib/data";
 import { getAllForms, getAllFormResponses } from "@/lib/forms-store";
 import { buildReminderCampaigns, getReminderStats } from "@/lib/reminders";
 
 export default async function AdminRemindersPage() {
-  const [data, forms, responses] = await Promise.all([
+  const [data, forms, responses, customCampaigns] = await Promise.all([
     getAppData(),
     getAllForms(),
     getAllFormResponses(),
+    getCustomCampaigns(),
   ]);
 
-  const campaigns = buildReminderCampaigns(data, forms, responses);
+  const campaigns = buildReminderCampaigns(data, forms, responses, customCampaigns);
   const stats = getReminderStats(campaigns);
 
   return (
@@ -49,6 +51,11 @@ export default async function AdminRemindersPage() {
           label="Zoom joins"
           value={String(stats.zoomCount)}
           detail="Campaigns ready with direct Zoom join links."
+        />
+        <StatCard
+          label="Custom"
+          value={String(stats.customCount)}
+          detail="Saved WhatsApp automation templates created by your team."
         />
       </div>
 
@@ -100,7 +107,7 @@ export default async function AdminRemindersPage() {
           </div>
         </SectionCard>
 
-        <RemindersWorkspace campaigns={campaigns} />
+        <RemindersWorkspace campaigns={campaigns} customCampaigns={customCampaigns} />
       </div>
     </AppShell>
   );

@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
+import { TrainerNotesWorkspace } from "@/components/trainer-notes-workspace";
+import { getTrainerNotes } from "@/lib/business-data-store";
 import { getAppData } from "@/lib/data";
 
 const trainerNavLinks = [
@@ -9,7 +11,7 @@ const trainerNavLinks = [
 ];
 
 export default async function TrainerClientsPage() {
-  const data = await getAppData();
+  const [data, trainerNotes] = await Promise.all([getAppData(), getTrainerNotes()]);
   const clients = data.profiles.filter((profile) => profile.role === "member");
 
   return (
@@ -34,6 +36,12 @@ export default async function TrainerClientsPage() {
           ))}
         </div>
       </SectionCard>
+
+      <div className="mt-6">
+        <SectionCard eyebrow="Notes" title="Trainer notes and follow-ups">
+          <TrainerNotesWorkspace members={clients} notes={trainerNotes} />
+        </SectionCard>
+      </div>
     </AppShell>
   );
 }

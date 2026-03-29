@@ -1,7 +1,8 @@
+import { CustomWhatsAppCampaign } from "@/lib/business-data";
 import { IntakeForm, IntakeFormResponse } from "@/lib/forms";
 import { AppData, ClassSession, Membership, Profile } from "@/lib/types";
 
-export type ReminderCategory = "Renewal" | "Class" | "Zoom" | "Form follow-up";
+export type ReminderCategory = "Renewal" | "Class" | "Zoom" | "Form follow-up" | "Custom";
 
 export type ReminderRecipient = {
   id: string;
@@ -253,12 +254,26 @@ export function buildReminderCampaigns(
   data: AppData,
   forms: IntakeForm[],
   responses: IntakeFormResponse[],
+  customCampaigns: CustomWhatsAppCampaign[] = [],
 ) {
   const campaigns: ReminderCampaign[] = [
     ...buildRenewalCampaigns(data),
     ...buildClassCampaigns(data),
     ...buildZoomCampaigns(data),
     ...buildFormFollowUpCampaigns(data, forms, responses),
+    ...customCampaigns.map((campaign) => ({
+      id: campaign.id,
+      title: campaign.title,
+      category: "Custom" as const,
+      scheduledFor: campaign.scheduledFor,
+      recipientCount: campaign.recipients.length,
+      message: campaign.message,
+      summary: `${campaign.recipients.length} saved recipient(s) in a custom WhatsApp automation campaign.`,
+      recipients: campaign.recipients.map((recipient) => ({
+        ...recipient,
+        whatsappUrl: buildWhatsAppLink(recipient.phone, campaign.message),
+      })),
+    })),
   ];
 
   return campaigns;
@@ -281,6 +296,9 @@ export function getReminderStats(campaigns: ReminderCampaign[]) {
   const followUpCount = campaigns.filter(
     (campaign) => campaign.category === "Form follow-up",
   ).length;
+  const customCount = campaigns.filter(
+    (campaign) => campaign.category === "Custom",
+  ).length;
 
   return {
     totalRecipients,
@@ -288,5 +306,6 @@ export function getReminderStats(campaigns: ReminderCampaign[]) {
     classCount,
     zoomCount,
     followUpCount,
+    customCount,
   };
 }
