@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 
+import { LeadRecord, LeadSource, LeadStatus } from "@/lib/business-data";
 import {
   AppData,
   Attendance,
@@ -41,6 +42,18 @@ export type ImportedUserRow = {
   fitnessGoal: string;
   branch: string;
   joinedOn: string;
+};
+
+export type ImportedLeadRow = {
+  id: string;
+  fullName: string;
+  phone: string;
+  goal: string;
+  source: LeadSource;
+  status: LeadStatus;
+  assignedTo: string;
+  nextFollowUp: string;
+  note: string;
 };
 
 function toJsonSheet<T extends Record<string, unknown>>(rows: T[]) {
@@ -385,6 +398,61 @@ export function buildUsersTemplateWorkbook() {
   return workbook;
 }
 
+export function buildLeadsWorkbook(leads: LeadRecord[]) {
+  const workbook = XLSX.utils.book_new();
+
+  const leadRows = leads.map((lead) => ({
+    id: lead.id,
+    full_name: lead.fullName,
+    phone: lead.phone,
+    goal: lead.goal,
+    source: lead.source,
+    status: lead.status,
+    assigned_to: lead.assignedTo,
+    next_follow_up: lead.nextFollowUp,
+    note: lead.note,
+  }));
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(leadRows), "leads");
+
+  return workbook;
+}
+
+export function buildLeadsTemplateWorkbook() {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet([
+      {
+        id: "",
+        full_name: "Khushi Patel",
+        phone: "+91 98765 30001",
+        goal: "Fat loss with online accountability",
+        source: "Instagram",
+        status: "New",
+        assigned_to: "Yogesh Kukadiya",
+        next_follow_up: "2026-03-30",
+        note: "Asked about morning Zoom batch and diet support.",
+      },
+      {
+        id: "",
+        full_name: "Ritesh Sharma",
+        phone: "+91 98765 30002",
+        goal: "Strength and posture correction",
+        source: "Referral",
+        status: "Contacted",
+        assigned_to: "Naina Kapoor",
+        next_follow_up: "2026-03-31",
+        note: "Interested in trainer-led hybrid plan with supplement advice.",
+      },
+    ]),
+    "leads",
+  );
+
+  return workbook;
+}
+
 export function buildInventoryWorkbook(
   items: InventoryItem[],
   sales: InventorySale[],
@@ -565,6 +633,72 @@ export function parseUsersWorkbook(buffer: ArrayBuffer) {
     users,
     summary: [{ sheet: "profiles" as const, rows: users.length }],
     duplicateEmails: duplicateEmails.map((item) => item.email),
+  };
+}
+
+export function parseLeadsWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+
+  if (!workbook.SheetNames.includes("leads")) {
+    throw new Error("Missing sheet: leads. Please use the leads template file.");
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets.leads, {
+    defval: "",
+  });
+
+  const validSources: LeadSource[] = [
+    "WhatsApp",
+    "Instagram",
+    "Referral",
+    "Walk-in",
+    "Website",
+  ];
+  const validStatuses: LeadStatus[] = [
+    "New",
+    "Contacted",
+    "Trial Booked",
+    "Converted",
+    "Lost",
+  ];
+
+  const leads = rows.map((row) => {
+    const item = normalizeKeys(row);
+    const sourceValue = toStringValue(item.source);
+    const statusValue = toStringValue(item.status);
+
+    return {
+      id: toStringValue(item.id),
+      fullName: toStringValue(item.full_name),
+      phone: toStringValue(item.phone),
+      goal: toStringValue(item.goal),
+      source: validSources.includes(sourceValue as LeadSource)
+        ? (sourceValue as LeadSource)
+        : "Website",
+      status: validStatuses.includes(statusValue as LeadStatus)
+        ? (statusValue as LeadStatus)
+        : "New",
+      assignedTo: toStringValue(item.assigned_to),
+      nextFollowUp: toStringValue(item.next_follow_up) || new Date().toISOString().slice(0, 10),
+      note: toStringValue(item.note),
+    } satisfies ImportedLeadRow;
+  });
+
+  const missingRequired = leads.filter((lead) => !lead.fullName || !lead.phone);
+
+  if (missingRequired.length > 0) {
+    throw new Error("Some lead rows are missing required values. full_name and phone are required.");
+  }
+
+  const duplicatePhones = leads.filter(
+    (lead, index) =>
+      leads.findIndex((item) => item.phone.toLowerCase() === lead.phone.toLowerCase()) !== index,
+  );
+
+  return {
+    leads,
+    summary: [{ sheet: "profiles" as const, rows: leads.length }],
+    duplicatePhones: duplicatePhones.map((item) => item.phone),
   };
 }
 

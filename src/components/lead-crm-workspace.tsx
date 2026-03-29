@@ -28,7 +28,21 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
   const [query, setQuery] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [formState, setFormState] = useState(emptyForm);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSummary, setImportSummary] = useState<{
+    imported: number;
+    updated: number;
+    totalLeads: number;
+    duplicatePhones: string[];
+    sampleLeads: Array<{
+      fullName: string;
+      phone: string;
+      source: LeadSource;
+      status: LeadStatus;
+    }>;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const filteredLeads = useMemo(() => {
@@ -48,6 +62,67 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
 
   function resetForm() {
     setFormState(emptyForm);
+  }
+
+  async function handleDownload(url: string) {
+    window.location.href = url;
+  }
+
+  async function handleImport(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!importFile) {
+      setStatusMessage("Please choose a leads Excel file first.");
+      return;
+    }
+
+    setIsImporting(true);
+    setStatusMessage("");
+    setImportSummary(null);
+
+    const formData = new FormData();
+    formData.append("file", importFile);
+
+    const response = await fetch("/api/admin/crm/import", {
+      method: "POST",
+      body: formData,
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      message?: string;
+      duplicatePhones?: string[];
+      sampleLeads?: Array<{
+        fullName: string;
+        phone: string;
+        source: LeadSource;
+        status: LeadStatus;
+      }>;
+      saved?: {
+        imported: number;
+        updated: number;
+        totalLeads: number;
+      };
+      leads?: LeadRecord[];
+    };
+
+    if (!response.ok || !payload.saved || !payload.leads) {
+      setStatusMessage(payload.error ?? "Lead import failed.");
+      setIsImporting(false);
+      return;
+    }
+
+    setLeads(payload.leads);
+    setImportSummary({
+      imported: payload.saved.imported,
+      updated: payload.saved.updated,
+      totalLeads: payload.saved.totalLeads,
+      duplicatePhones: payload.duplicatePhones ?? [],
+      sampleLeads: payload.sampleLeads ?? [],
+    });
+    setImportFile(null);
+    setStatusMessage(payload.message ?? "Leads workbook imported.");
+    setIsImporting(false);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -130,6 +205,82 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
 
   return (
     <div className="space-y-6">
+      <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Bulk lead upload</p>
+            <h3 className="mt-2 font-serif text-2xl text-slate-950">Excel thi ghana leads add karo</h3>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+              Sample file download karo, leads fill karo, ane ek sathe CRM ma upload karo.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => handleDownload("/api/admin/crm/export")}
+              className="rounded-full border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-medium text-orange-700"
+            >
+              Export leads Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDownload("/api/admin/crm/template")}
+              className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700"
+            >
+              Download sample file
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleImport} className="mt-5 space-y-4">
+          <label className="block text-sm font-medium text-slate-700">
+            Leads Excel file
+            <input
+              type="file"
+              accept=".xlsx"
+              onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+              className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isImporting}
+            className="rounded-full bg-orange-500 px-5 py-3 text-sm font-medium text-slate-950 disabled:opacity-60"
+          >
+            {isImporting ? "Importing..." : "Import leads"}
+          </button>
+        </form>
+
+        {importSummary ? (
+          <div className="mt-5 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap gap-4 text-sm text-slate-700">
+              <span>Imported: {importSummary.imported}</span>
+              <span>Updated: {importSummary.updated}</span>
+              <span>Total leads: {importSummary.totalLeads}</span>
+            </div>
+            {importSummary.duplicatePhones.length > 0 ? (
+              <p className="mt-3 text-sm text-amber-700">
+                Duplicate phones in file: {importSummary.duplicatePhones.join(", ")}
+              </p>
+            ) : null}
+            {importSummary.sampleLeads.length > 0 ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {importSummary.sampleLeads.map((lead) => (
+                  <div key={`${lead.phone}-${lead.fullName}`} className="rounded-2xl bg-white p-3">
+                    <p className="font-medium text-slate-950">{lead.fullName}</p>
+                    <p className="mt-1 text-sm text-slate-600">{lead.phone}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-orange-600">
+                      {lead.source}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">{lead.status}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
       <form
         onSubmit={handleSubmit}
         className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]"

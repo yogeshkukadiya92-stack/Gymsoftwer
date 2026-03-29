@@ -1034,6 +1034,33 @@ export async function deleteSupabaseLead(id: string) {
   return { id };
 }
 
+export async function upsertSupabaseLeads(leads: LeadRecord[]) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const rows = leads.map((lead) => ({
+    id: lead.id || `lead-${crypto.randomUUID()}`,
+    full_name: lead.fullName,
+    phone: lead.phone,
+    goal: lead.goal,
+    source: lead.source,
+    status: lead.status,
+    assigned_to: lead.assignedTo,
+    next_follow_up: lead.nextFollowUp,
+    note: lead.note,
+  }));
+
+  const { data, error } = await supabase.from("leads").upsert(rows, { onConflict: "id" }).select("*");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => mapLeadRow(row as Record<string, unknown>));
+}
+
 export async function createSupabaseDietPlan(input: Omit<DietPlanRecord, "id">) {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {

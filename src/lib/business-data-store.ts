@@ -23,6 +23,7 @@ import {
   deleteSupabaseLead,
   deleteSupabaseTrainerNote,
   getSupabaseBusinessStore,
+  upsertSupabaseLeads,
   updateSupabaseCustomCampaign,
   updateSupabaseDietPlan,
   updateSupabaseLead,
@@ -185,6 +186,96 @@ export async function deleteLeadRecord(id: string) {
 
   await writeStore(nextStore);
   return { id };
+}
+
+export async function importLeadRecords(leads: LeadRecord[]) {
+  const normalizedLeads = leads.map((lead) => ({
+    ...lead,
+    id: lead.id || `lead-${crypto.randomUUID()}`,
+    nextFollowUp: lead.nextFollowUp || new Date().toISOString().slice(0, 10),
+  }));
+
+  const supabaseStore = await getSupabaseBusinessStore();
+  if (supabaseStore) {
+    const existingById = new Map(supabaseStore.leads.map((lead) => [lead.id, lead]));
+    const existingByPhone = new Map(
+      supabaseStore.leads.map((lead) => [lead.phone.toLowerCase(), lead]),
+    );
+    const mergedMap = new Map(supabaseStore.leads.map((lead) => [lead.id, lead]));
+    const imported: LeadRecord[] = [];
+    const updated: LeadRecord[] = [];
+
+    normalizedLeads.forEach((lead) => {
+      const existing = existingById.get(lead.id) ?? existingByPhone.get(lead.phone.toLowerCase());
+
+      if (existing) {
+        const nextLead: LeadRecord = {
+          ...existing,
+          ...lead,
+          id: existing.id,
+        };
+        mergedMap.set(existing.id, nextLead);
+        updated.push(nextLead);
+        return;
+      }
+
+      mergedMap.set(lead.id, lead);
+      imported.push(lead);
+    });
+
+    const supabaseLeads = await upsertSupabaseLeads(Array.from(mergedMap.values()));
+
+    if (!supabaseLeads) {
+      throw new Error("Lead import failed.");
+    }
+
+    return {
+      leads: supabaseLeads,
+      imported: imported.map((lead) => supabaseLeads.find((item) => item.id === lead.id) ?? lead),
+      updated: updated.map((lead) => supabaseLeads.find((item) => item.id === lead.id) ?? lead),
+      totalLeads: supabaseLeads.length,
+    };
+  }
+
+  const store = await readStore();
+  const existingById = new Map(store.leads.map((lead) => [lead.id, lead]));
+  const existingByPhone = new Map(store.leads.map((lead) => [lead.phone.toLowerCase(), lead]));
+  const imported: LeadRecord[] = [];
+  const updated: LeadRecord[] = [];
+
+  const mergedMap = new Map(store.leads.map((lead) => [lead.id, lead]));
+
+  normalizedLeads.forEach((lead) => {
+    const existing = existingById.get(lead.id) ?? existingByPhone.get(lead.phone.toLowerCase());
+
+    if (existing) {
+      const nextLead: LeadRecord = {
+        ...existing,
+        ...lead,
+        id: existing.id,
+      };
+      mergedMap.set(existing.id, nextLead);
+      updated.push(nextLead);
+      return;
+    }
+
+    mergedMap.set(lead.id, lead);
+    imported.push(lead);
+  });
+
+  const nextStore: BusinessStore = {
+    ...store,
+    leads: Array.from(mergedMap.values()),
+  };
+
+  await writeStore(nextStore);
+
+  return {
+    leads: nextStore.leads,
+    imported,
+    updated,
+    totalLeads: nextStore.leads.length,
+  };
 }
 
 export async function createDietPlan(input: Omit<DietPlanRecord, "id">) {
