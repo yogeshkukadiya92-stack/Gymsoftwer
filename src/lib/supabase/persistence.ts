@@ -17,6 +17,12 @@ import {
   buildDefaultFormFields,
   slugifyFormTitle,
 } from "@/lib/forms";
+import {
+  CustomWhatsAppCampaign,
+  DietPlanRecord,
+  LeadRecord,
+  TrainerClientNote,
+} from "@/lib/business-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function mapFormRow(row: {
@@ -237,6 +243,69 @@ function mapResponseRow(row: {
     formId: row.form_id,
     submittedAt: row.submitted_at.replace("T", " ").slice(0, 16),
     answers: row.answers ?? {},
+  };
+}
+
+function mapLeadRow(row: Record<string, unknown>): LeadRecord {
+  return {
+    id: String(row.id ?? ""),
+    fullName: String(row.full_name ?? ""),
+    phone: String(row.phone ?? ""),
+    goal: String(row.goal ?? ""),
+    source: String(row.source ?? "Website") as LeadRecord["source"],
+    status: String(row.status ?? "New") as LeadRecord["status"],
+    assignedTo: String(row.assigned_to ?? ""),
+    nextFollowUp: String(row.next_follow_up ?? ""),
+    note: String(row.note ?? ""),
+  };
+}
+
+function mapDietPlanRow(row: Record<string, unknown>): DietPlanRecord {
+  const meals = Array.isArray(row.meals) ? row.meals : [];
+
+  return {
+    id: String(row.id ?? ""),
+    memberName: String(row.member_name ?? ""),
+    coach: String(row.coach ?? ""),
+    goal: String(row.goal ?? ""),
+    calories: Number(row.calories ?? 0),
+    proteinGrams: Number(row.protein_grams ?? 0),
+    meals: meals.map((meal) => ({
+      title: String(meal.title ?? ""),
+      items: Array.isArray(meal.items) ? meal.items.map((item: unknown) => String(item)) : [],
+    })),
+    adherence: Number(row.adherence ?? 0),
+    updatedOn: String(row.updated_on ?? ""),
+  };
+}
+
+function mapCustomCampaignRow(row: Record<string, unknown>): CustomWhatsAppCampaign {
+  const recipients = Array.isArray(row.recipients) ? row.recipients : [];
+
+  return {
+    id: String(row.id ?? ""),
+    title: String(row.title ?? ""),
+    category: "Custom",
+    scheduledFor: String(row.scheduled_for ?? ""),
+    message: String(row.message ?? ""),
+    recipients: recipients.map((recipient) => ({
+      id: String(recipient.id ?? ""),
+      name: String(recipient.name ?? ""),
+      phone: String(recipient.phone ?? ""),
+      note: String(recipient.note ?? ""),
+    })),
+  };
+}
+
+function mapTrainerNoteRow(row: Record<string, unknown>): TrainerClientNote {
+  return {
+    id: String(row.id ?? ""),
+    memberId: String(row.member_id ?? ""),
+    memberName: String(row.member_name ?? ""),
+    trainerName: String(row.trainer_name ?? ""),
+    note: String(row.note ?? ""),
+    focusArea: String(row.focus_area ?? ""),
+    updatedOn: String(row.updated_on ?? ""),
   };
 }
 
@@ -864,4 +933,307 @@ export async function upsertSupabaseAttendanceEntry(input: {
   }
 
   return mapAttendanceRow(data as Record<string, unknown>) as Attendance;
+}
+
+export async function getSupabaseBusinessStore() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const [leads, dietPlans, customCampaigns, trainerNotes] = await Promise.all([
+    supabase.from("leads").select("*"),
+    supabase.from("diet_plans").select("*"),
+    supabase.from("custom_whatsapp_campaigns").select("*"),
+    supabase.from("trainer_notes").select("*"),
+  ]);
+
+  if ([leads, dietPlans, customCampaigns, trainerNotes].some((result) => result.error)) {
+    return null;
+  }
+
+  return {
+    leads: (leads.data ?? []).map((row) => mapLeadRow(row as Record<string, unknown>)),
+    dietPlans: (dietPlans.data ?? []).map((row) =>
+      mapDietPlanRow(row as Record<string, unknown>),
+    ),
+    customCampaigns: (customCampaigns.data ?? []).map((row) =>
+      mapCustomCampaignRow(row as Record<string, unknown>),
+    ),
+    trainerNotes: (trainerNotes.data ?? []).map((row) =>
+      mapTrainerNoteRow(row as Record<string, unknown>),
+    ),
+  };
+}
+
+export async function createSupabaseLead(input: Omit<LeadRecord, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const lead: LeadRecord = { id: `lead-${crypto.randomUUID()}`, ...input };
+  const { error } = await supabase.from("leads").insert({
+    id: lead.id,
+    full_name: lead.fullName,
+    phone: lead.phone,
+    goal: lead.goal,
+    source: lead.source,
+    status: lead.status,
+    assigned_to: lead.assignedTo,
+    next_follow_up: lead.nextFollowUp,
+    note: lead.note,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return lead;
+}
+
+export async function updateSupabaseLead(id: string, input: Omit<LeadRecord, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const lead: LeadRecord = { id, ...input };
+  const { error } = await supabase
+    .from("leads")
+    .update({
+      full_name: lead.fullName,
+      phone: lead.phone,
+      goal: lead.goal,
+      source: lead.source,
+      status: lead.status,
+      assigned_to: lead.assignedTo,
+      next_follow_up: lead.nextFollowUp,
+      note: lead.note,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return lead;
+}
+
+export async function deleteSupabaseLead(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("leads").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { id };
+}
+
+export async function createSupabaseDietPlan(input: Omit<DietPlanRecord, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const plan: DietPlanRecord = { id: `diet-${crypto.randomUUID()}`, ...input };
+  const { error } = await supabase.from("diet_plans").insert({
+    id: plan.id,
+    member_name: plan.memberName,
+    coach: plan.coach,
+    goal: plan.goal,
+    calories: plan.calories,
+    protein_grams: plan.proteinGrams,
+    meals: plan.meals,
+    adherence: plan.adherence,
+    updated_on: plan.updatedOn,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return plan;
+}
+
+export async function updateSupabaseDietPlan(id: string, input: Omit<DietPlanRecord, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const plan: DietPlanRecord = { id, ...input };
+  const { error } = await supabase
+    .from("diet_plans")
+    .update({
+      member_name: plan.memberName,
+      coach: plan.coach,
+      goal: plan.goal,
+      calories: plan.calories,
+      protein_grams: plan.proteinGrams,
+      meals: plan.meals,
+      adherence: plan.adherence,
+      updated_on: plan.updatedOn,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return plan;
+}
+
+export async function deleteSupabaseDietPlan(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("diet_plans").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { id };
+}
+
+export async function createSupabaseCustomCampaign(
+  input: Omit<CustomWhatsAppCampaign, "id" | "category">,
+) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const campaign: CustomWhatsAppCampaign = {
+    id: `campaign-${crypto.randomUUID()}`,
+    category: "Custom",
+    ...input,
+  };
+  const { error } = await supabase.from("custom_whatsapp_campaigns").insert({
+    id: campaign.id,
+    title: campaign.title,
+    scheduled_for: campaign.scheduledFor,
+    message: campaign.message,
+    recipients: campaign.recipients,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return campaign;
+}
+
+export async function updateSupabaseCustomCampaign(
+  id: string,
+  input: Omit<CustomWhatsAppCampaign, "id" | "category">,
+) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const campaign: CustomWhatsAppCampaign = { id, category: "Custom", ...input };
+  const { error } = await supabase
+    .from("custom_whatsapp_campaigns")
+    .update({
+      title: campaign.title,
+      scheduled_for: campaign.scheduledFor,
+      message: campaign.message,
+      recipients: campaign.recipients,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return campaign;
+}
+
+export async function deleteSupabaseCustomCampaign(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("custom_whatsapp_campaigns").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { id };
+}
+
+export async function createSupabaseTrainerNote(input: Omit<TrainerClientNote, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const note: TrainerClientNote = { id: `trainer-note-${crypto.randomUUID()}`, ...input };
+  const { error } = await supabase.from("trainer_notes").insert({
+    id: note.id,
+    member_id: note.memberId,
+    member_name: note.memberName,
+    trainer_name: note.trainerName,
+    note: note.note,
+    focus_area: note.focusArea,
+    updated_on: note.updatedOn,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return note;
+}
+
+export async function updateSupabaseTrainerNote(
+  id: string,
+  input: Omit<TrainerClientNote, "id">,
+) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const note: TrainerClientNote = { id, ...input };
+  const { error } = await supabase
+    .from("trainer_notes")
+    .update({
+      member_id: note.memberId,
+      member_name: note.memberName,
+      trainer_name: note.trainerName,
+      note: note.note,
+      focus_area: note.focusArea,
+      updated_on: note.updatedOn,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return note;
+}
+
+export async function deleteSupabaseTrainerNote(id: string) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("trainer_notes").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { id };
 }

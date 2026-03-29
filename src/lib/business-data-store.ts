@@ -13,6 +13,21 @@ import {
   starterLeads,
   starterTrainerNotes,
 } from "@/lib/business-data";
+import {
+  createSupabaseCustomCampaign,
+  createSupabaseDietPlan,
+  createSupabaseLead,
+  createSupabaseTrainerNote,
+  deleteSupabaseCustomCampaign,
+  deleteSupabaseDietPlan,
+  deleteSupabaseLead,
+  deleteSupabaseTrainerNote,
+  getSupabaseBusinessStore,
+  updateSupabaseCustomCampaign,
+  updateSupabaseDietPlan,
+  updateSupabaseLead,
+  updateSupabaseTrainerNote,
+} from "@/lib/supabase/persistence";
 
 type BusinessStore = {
   leads: LeadRecord[];
@@ -62,26 +77,27 @@ async function writeStore(store: BusinessStore) {
 }
 
 export async function getBusinessStore() {
-  return readStore();
+  const supabaseStore = await getSupabaseBusinessStore();
+  return supabaseStore ?? readStore();
 }
 
 export async function getLeadRecords() {
-  const store = await readStore();
+  const store = await getBusinessStore();
   return store.leads;
 }
 
 export async function getDietPlans() {
-  const store = await readStore();
+  const store = await getBusinessStore();
   return store.dietPlans;
 }
 
 export async function getCustomCampaigns() {
-  const store = await readStore();
+  const store = await getBusinessStore();
   return store.customCampaigns;
 }
 
 export async function getTrainerNotes() {
-  const store = await readStore();
+  const store = await getBusinessStore();
   return store.trainerNotes;
 }
 
@@ -95,6 +111,11 @@ export async function createLeadRecord(input: {
   nextFollowUp: string;
   note: string;
 }) {
+  const supabaseLead = await createSupabaseLead(input);
+  if (supabaseLead) {
+    return supabaseLead;
+  }
+
   const store = await readStore();
   const lead: LeadRecord = {
     id: `lead-${crypto.randomUUID()}`,
@@ -123,6 +144,11 @@ export async function updateLeadRecord(
     note: string;
   },
 ) {
+  const supabaseLead = await updateSupabaseLead(id, input);
+  if (supabaseLead) {
+    return supabaseLead;
+  }
+
   const store = await readStore();
   const existing = store.leads.find((lead) => lead.id === id);
 
@@ -146,6 +172,11 @@ export async function updateLeadRecord(
 }
 
 export async function deleteLeadRecord(id: string) {
+  const supabaseResult = await deleteSupabaseLead(id);
+  if (supabaseResult) {
+    return supabaseResult;
+  }
+
   const store = await readStore();
   const nextStore: BusinessStore = {
     ...store,
@@ -157,6 +188,11 @@ export async function deleteLeadRecord(id: string) {
 }
 
 export async function createDietPlan(input: Omit<DietPlanRecord, "id">) {
+  const supabasePlan = await createSupabaseDietPlan(input);
+  if (supabasePlan) {
+    return supabasePlan;
+  }
+
   const store = await readStore();
   const plan: DietPlanRecord = {
     id: `diet-${crypto.randomUUID()}`,
@@ -173,6 +209,11 @@ export async function createDietPlan(input: Omit<DietPlanRecord, "id">) {
 }
 
 export async function updateDietPlan(id: string, input: Omit<DietPlanRecord, "id">) {
+  const supabasePlan = await updateSupabaseDietPlan(id, input);
+  if (supabasePlan) {
+    return supabasePlan;
+  }
+
   const store = await readStore();
   const existing = store.dietPlans.find((plan) => plan.id === id);
 
@@ -196,6 +237,11 @@ export async function updateDietPlan(id: string, input: Omit<DietPlanRecord, "id
 }
 
 export async function deleteDietPlan(id: string) {
+  const supabaseResult = await deleteSupabaseDietPlan(id);
+  if (supabaseResult) {
+    return supabaseResult;
+  }
+
   const store = await readStore();
   const nextStore: BusinessStore = {
     ...store,
@@ -207,6 +253,11 @@ export async function deleteDietPlan(id: string) {
 }
 
 export async function createCustomCampaign(input: Omit<CustomWhatsAppCampaign, "id" | "category">) {
+  const supabaseCampaign = await createSupabaseCustomCampaign(input);
+  if (supabaseCampaign) {
+    return supabaseCampaign;
+  }
+
   const store = await readStore();
   const campaign: CustomWhatsAppCampaign = {
     id: `campaign-${crypto.randomUUID()}`,
@@ -227,6 +278,11 @@ export async function updateCustomCampaign(
   id: string,
   input: Omit<CustomWhatsAppCampaign, "id" | "category">,
 ) {
+  const supabaseCampaign = await updateSupabaseCustomCampaign(id, input);
+  if (supabaseCampaign) {
+    return supabaseCampaign;
+  }
+
   const store = await readStore();
   const existing = store.customCampaigns.find((campaign) => campaign.id === id);
 
@@ -253,6 +309,11 @@ export async function updateCustomCampaign(
 }
 
 export async function deleteCustomCampaign(id: string) {
+  const supabaseResult = await deleteSupabaseCustomCampaign(id);
+  if (supabaseResult) {
+    return supabaseResult;
+  }
+
   const store = await readStore();
   const nextStore: BusinessStore = {
     ...store,
@@ -264,6 +325,11 @@ export async function deleteCustomCampaign(id: string) {
 }
 
 export async function createTrainerNote(input: Omit<TrainerClientNote, "id">) {
+  const supabaseNote = await createSupabaseTrainerNote(input);
+  if (supabaseNote) {
+    return supabaseNote;
+  }
+
   const store = await readStore();
   const note: TrainerClientNote = {
     id: `trainer-note-${crypto.randomUUID()}`,
@@ -280,6 +346,11 @@ export async function createTrainerNote(input: Omit<TrainerClientNote, "id">) {
 }
 
 export async function updateTrainerNote(id: string, input: Omit<TrainerClientNote, "id">) {
+  const supabaseNote = await updateSupabaseTrainerNote(id, input);
+  if (supabaseNote) {
+    return supabaseNote;
+  }
+
   const store = await readStore();
   const existing = store.trainerNotes.find((note) => note.id === id);
 
@@ -303,6 +374,11 @@ export async function updateTrainerNote(id: string, input: Omit<TrainerClientNot
 }
 
 export async function deleteTrainerNote(id: string) {
+  const supabaseResult = await deleteSupabaseTrainerNote(id);
+  if (supabaseResult) {
+    return supabaseResult;
+  }
+
   const store = await readStore();
   const nextStore: BusinessStore = {
     ...store,

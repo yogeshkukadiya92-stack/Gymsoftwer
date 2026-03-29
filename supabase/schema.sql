@@ -174,3 +174,45 @@ create table if not exists intake_form_responses (
   submitted_at timestamptz not null default now(),
   answers jsonb not null default '{}'::jsonb
 );
+
+create table if not exists leads (
+  id text primary key,
+  full_name text not null,
+  phone text not null,
+  goal text not null default '',
+  source text not null,
+  status text not null,
+  assigned_to text not null default '',
+  next_follow_up date not null,
+  note text not null default ''
+);
+
+create table if not exists diet_plans (
+  id text primary key,
+  member_name text not null,
+  coach text not null default '',
+  goal text not null,
+  calories integer not null default 0,
+  protein_grams integer not null default 0,
+  meals jsonb not null default '[]'::jsonb,
+  adherence integer not null default 0,
+  updated_on date not null
+);
+
+create table if not exists custom_whatsapp_campaigns (
+  id text primary key,
+  title text not null,
+  scheduled_for text not null default '',
+  message text not null,
+  recipients jsonb not null default '[]'::jsonb
+);
+
+create table if not exists trainer_notes (
+  id text primary key,
+  member_id text not null references profiles(id) on delete cascade,
+  member_name text not null,
+  trainer_name text not null default '',
+  note text not null,
+  focus_area text not null default '',
+  updated_on date not null
+);
