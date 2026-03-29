@@ -1,6 +1,8 @@
 export const adminNavLinks = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/crm", label: "Lead CRM" },
+  { href: "/admin/diet-planner", label: "Diet planner" },
   { href: "/admin/inventory", label: "Inventory" },
   { href: "/admin/progress", label: "Progress" },
   { href: "/admin/reminders", label: "Reminders" },

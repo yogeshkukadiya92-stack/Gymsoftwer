@@ -12,6 +12,7 @@ const categoryFilters: Array<ReminderCategory | "All"> = [
   "All",
   "Renewal",
   "Class",
+  "Zoom",
   "Form follow-up",
 ];
 

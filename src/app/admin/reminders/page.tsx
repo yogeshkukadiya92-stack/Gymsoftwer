@@ -45,6 +45,11 @@ export default async function AdminRemindersPage() {
           value={String(stats.classCount)}
           detail="Booked attendees who should receive session reminders."
         />
+        <StatCard
+          label="Zoom joins"
+          value={String(stats.zoomCount)}
+          detail="Campaigns ready with direct Zoom join links."
+        />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.86fr_1.14fr]">
@@ -76,13 +81,21 @@ export default async function AdminRemindersPage() {
               </div>
               <div className="rounded-[1.5rem] border border-slate-200 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-600">
-                  Share style
+                  Zoom nudges
                 </p>
                 <p className="mt-2 text-slate-700">
-                  WhatsApp links open pre-filled text so your team can send reminders in
-                  one click.
+                  {stats.zoomCount} Zoom join campaign(s) are ready for one-tap WhatsApp delivery.
                 </p>
               </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-slate-200 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-600">
+                Automation ideas
+              </p>
+              <p className="mt-2 text-slate-700">
+                Use these campaigns as your daily WhatsApp automation queue for renewals, join reminders,
+                trial follow-ups, and incomplete forms.
+              </p>
             </div>
           </div>
         </SectionCard>

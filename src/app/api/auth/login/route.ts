@@ -59,7 +59,12 @@ export async function POST(request: Request) {
       .eq("email", user?.email ?? "")
       .single();
 
-    const redirectTo = profile?.role === "admin" ? "/admin" : "/member";
+    const redirectTo =
+      profile?.role === "admin"
+        ? "/admin"
+        : profile?.role === "trainer"
+          ? "/trainer"
+          : "/member";
 
     return Response.json({
       message: "Login successful.",

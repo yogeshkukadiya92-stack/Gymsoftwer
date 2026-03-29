@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
+import { starterDietPlans, starterLeads } from "@/lib/business-data";
 import { getAppData } from "@/lib/data";
 import { getAllForms, getAllFormResponses } from "@/lib/forms-store";
 
@@ -33,15 +34,9 @@ export default async function AdminReportsPage() {
   const memberGrowth = getMemberGrowthRows(members.map((member) => member.joinedOn));
   const maxGrowthCount = Math.max(...memberGrowth.map((item) => item.count), 1);
 
-  const presentCount = data.attendance.filter(
-    (entry) => entry.status === "Checked In",
-  ).length;
-  const absentCount = data.attendance.filter(
-    (entry) => entry.status === "Missed",
-  ).length;
-  const bookedCount = data.attendance.filter(
-    (entry) => entry.status === "Booked",
-  ).length;
+  const presentCount = data.attendance.filter((entry) => entry.status === "Checked In").length;
+  const absentCount = data.attendance.filter((entry) => entry.status === "Missed").length;
+  const bookedCount = data.attendance.filter((entry) => entry.status === "Booked").length;
 
   const collectedRevenue = data.invoices
     .filter((invoice) => invoice.status === "Paid")
@@ -50,23 +45,46 @@ export default async function AdminReportsPage() {
     (sum, membership) => sum + membership.outstandingAmountInr,
     0,
   );
-  const overdueInvoices = data.invoices.filter(
-    (invoice) => invoice.status === "Overdue",
-  ).length;
+  const overdueInvoices = data.invoices.filter((invoice) => invoice.status === "Overdue").length;
+
+  const estimatedInventoryMargin = data.inventorySales.reduce((sum, sale) => {
+    const item = data.inventoryItems.find((inventoryItem) => inventoryItem.id === sale.itemId);
+    if (!item) {
+      return sum;
+    }
+    return sum + (sale.totalAmountInr - item.costPriceInr * sale.quantity);
+  }, 0);
 
   const formSummary = forms.map((form) => ({
     id: form.id,
     title: form.title,
     responses: responses.filter((response) => response.formId === form.id).length,
   }));
-
   const topFormResponses = [...formSummary].sort((a, b) => b.responses - a.responses);
+
+  const trainers = data.profiles.filter((profile) => profile.role === "trainer");
+  const trainerRows = trainers.map((trainer) => ({
+    id: trainer.id,
+    fullName: trainer.fullName,
+    activePlans: data.workoutPlans.filter((plan) => plan.coach === trainer.fullName).length,
+    classes: data.sessions.filter((session) => session.coach === trainer.fullName).length,
+  }));
+
+  const leadStats = {
+    total: starterLeads.length,
+    converted: starterLeads.filter((lead) => lead.status === "Converted").length,
+    activeTrials: starterLeads.filter((lead) => lead.status === "Trial Booked").length,
+    new: starterLeads.filter((lead) => lead.status === "New").length,
+  };
+
+  const avgDietAdherence =
+    starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) / starterDietPlans.length;
 
   return (
     <AppShell
       role="admin"
       title="Reports dashboard"
-      subtitle="Track member growth, attendance performance, billing health, and form activity from one analytics workspace."
+      subtitle="Track member growth, trainer workload, sales, forms, diet adherence, and lead conversions from one analytics workspace."
       navLinks={adminNavLinks}
     >
       <div className="grid gap-6 lg:grid-cols-4">
@@ -86,9 +104,9 @@ export default async function AdminReportsPage() {
           detail="Collected revenue from paid invoices."
         />
         <StatCard
-          label="Form responses"
-          value={String(responses.length)}
-          detail="Total submitted form responses across all forms."
+          label="Lead conversions"
+          value={String(leadStats.converted)}
+          detail="Converted inquiries from the current CRM funnel."
         />
       </div>
 
@@ -130,8 +148,7 @@ export default async function AdminReportsPage() {
           <div className="mt-5 space-y-3">
             {data.sessions.map((session) => {
               const present = data.attendance.filter(
-                (entry) =>
-                  entry.sessionId === session.id && entry.status === "Checked In",
+                (entry) => entry.sessionId === session.id && entry.status === "Checked In",
               ).length;
 
               return (
@@ -173,26 +190,16 @@ export default async function AdminReportsPage() {
               <p className="mt-3 text-3xl font-semibold text-rose-900">{overdueInvoices}</p>
             </div>
           </div>
-          <div className="mt-5 space-y-3">
-            {data.invoices.map((invoice) => {
-              const member = data.profiles.find((profile) => profile.id === invoice.memberId);
-
-              return (
-                <div
-                  key={invoice.id}
-                  className="flex items-center justify-between rounded-[1.5rem] border border-slate-200 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-950">{invoice.invoiceNumber}</p>
-                    <p className="text-sm text-slate-500">{member?.fullName}</p>
-                  </div>
-                  <div className="text-right text-sm">
-                    <p className="font-medium text-slate-900">{formatInr(invoice.amountInr)}</p>
-                    <p className="text-slate-500">{invoice.status}</p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mt-5 rounded-[1.5rem] border border-slate-200 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-600">
+              Inventory margin snapshot
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">
+              {formatInr(estimatedInventoryMargin)}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              Estimated profit generated from recorded supplement sales.
+            </p>
           </div>
         </SectionCard>
 
@@ -204,9 +211,7 @@ export default async function AdminReportsPage() {
             </div>
             <div className="rounded-[1.5rem] bg-orange-50 p-5">
               <p className="text-sm uppercase tracking-[0.22em] text-orange-700">Responses</p>
-              <p className="mt-3 text-3xl font-semibold text-orange-900">
-                {responses.length}
-              </p>
+              <p className="mt-3 text-3xl font-semibold text-orange-900">{responses.length}</p>
             </div>
             <div className="rounded-[1.5rem] bg-emerald-50 p-5">
               <p className="text-sm uppercase tracking-[0.22em] text-emerald-700">Top form</p>
@@ -225,6 +230,66 @@ export default async function AdminReportsPage() {
                 <p className="text-sm font-medium text-slate-700">
                   {form.responses} response(s)
                 </p>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <SectionCard eyebrow="Team" title="Trainer workload">
+          <div className="space-y-3">
+            {trainerRows.map((trainer) => (
+              <div
+                key={trainer.id}
+                className="flex items-center justify-between rounded-[1.5rem] border border-slate-200 px-4 py-3"
+              >
+                <div>
+                  <p className="font-semibold text-slate-950">{trainer.fullName}</p>
+                  <p className="text-sm text-slate-500">
+                    {trainer.activePlans} active plans • {trainer.classes} classes
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                  Trainer
+                </span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard eyebrow="Leads + diet" title="Growth funnel">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[1.5rem] bg-slate-50 p-5">
+              <p className="text-sm uppercase tracking-[0.22em] text-slate-500">New leads</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{leadStats.new}</p>
+            </div>
+            <div className="rounded-[1.5rem] bg-orange-50 p-5">
+              <p className="text-sm uppercase tracking-[0.22em] text-orange-700">Trial booked</p>
+              <p className="mt-3 text-3xl font-semibold text-orange-900">{leadStats.activeTrials}</p>
+            </div>
+            <div className="rounded-[1.5rem] bg-emerald-50 p-5">
+              <p className="text-sm uppercase tracking-[0.22em] text-emerald-700">Converted</p>
+              <p className="mt-3 text-3xl font-semibold text-emerald-900">{leadStats.converted}</p>
+            </div>
+            <div className="rounded-[1.5rem] bg-slate-950 p-5 text-white">
+              <p className="text-sm uppercase tracking-[0.22em] text-slate-400">Diet adherence</p>
+              <p className="mt-3 text-3xl font-semibold">{Math.round(avgDietAdherence)}%</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {starterLeads.map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between rounded-[1.5rem] border border-slate-200 px-4 py-3"
+              >
+                <div>
+                  <p className="font-semibold text-slate-950">{lead.fullName}</p>
+                  <p className="text-sm text-slate-500">{lead.source} • {lead.assignedTo}</p>
+                </div>
+                <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                  {lead.status}
+                </span>
               </div>
             ))}
           </div>

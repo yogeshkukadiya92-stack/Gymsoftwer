@@ -1,7 +1,7 @@
 import { IntakeForm, IntakeFormResponse } from "@/lib/forms";
 import { AppData, ClassSession, Membership, Profile } from "@/lib/types";
 
-export type ReminderCategory = "Renewal" | "Class" | "Form follow-up";
+export type ReminderCategory = "Renewal" | "Class" | "Zoom" | "Form follow-up";
 
 export type ReminderRecipient = {
   id: string;
@@ -49,6 +49,10 @@ function buildRenewalMessage(member: Profile, membership: Membership) {
 
 function buildClassMessage(member: Profile, session: ClassSession) {
   return `Hi ${member.fullName}, reminder for your ${session.title} class on ${session.day} at ${session.time}. Please join 5 minutes early. Reply if you need the meeting link again.`;
+}
+
+function buildZoomMessage(member: Profile, session: ClassSession) {
+  return `Hi ${member.fullName}, your ${session.title} Zoom class starts ${session.day} at ${session.time}. Join here: ${session.zoomLink ?? "link pending"}. Please be ready 5 minutes early.`;
 }
 
 function buildFormFollowUpMessage(member: Profile, form: IntakeForm) {
@@ -153,6 +157,53 @@ function buildClassCampaigns(data: AppData) {
     .filter(notNull);
 }
 
+function buildZoomCampaigns(data: AppData) {
+  return data.sessions
+    .filter((session) => session.zoomLink)
+    .map((session) => {
+      const bookedEntries = data.attendance.filter(
+        (entry) => entry.sessionId === session.id && entry.status !== "Missed",
+      );
+
+      const recipients = bookedEntries
+        .map((entry) => {
+          const member = data.profiles.find((profile) => profile.id === entry.memberId);
+
+          if (!member) {
+            return null;
+          }
+
+          const message = buildZoomMessage(member, session);
+          return createRecipient(
+            member,
+            `Join link ready for ${session.day} ${session.time}`,
+            message,
+          );
+        })
+        .filter(notNull);
+
+      if (recipients.length === 0) {
+        return null;
+      }
+
+      return {
+        id: `zoom-${session.id}`,
+        title: `${session.title} Zoom join reminder`,
+        category: "Zoom" as const,
+        scheduledFor: `${session.day} ${session.time}`,
+        recipientCount: recipients.length,
+        message: buildZoomMessage(
+          data.profiles.find((profile) => profile.id === bookedEntries[0]?.memberId) ??
+            data.profiles[0],
+          session,
+        ),
+        summary: `${recipients.length} attendee(s) can receive direct Zoom join reminders.`,
+        recipients,
+      };
+    })
+    .filter(notNull);
+}
+
 function buildFormFollowUpCampaigns(
   data: AppData,
   forms: IntakeForm[],
@@ -206,6 +257,7 @@ export function buildReminderCampaigns(
   const campaigns: ReminderCampaign[] = [
     ...buildRenewalCampaigns(data),
     ...buildClassCampaigns(data),
+    ...buildZoomCampaigns(data),
     ...buildFormFollowUpCampaigns(data, forms, responses),
   ];
 
@@ -223,6 +275,9 @@ export function getReminderStats(campaigns: ReminderCampaign[]) {
   const classCount = campaigns.filter(
     (campaign) => campaign.category === "Class",
   ).length;
+  const zoomCount = campaigns.filter(
+    (campaign) => campaign.category === "Zoom",
+  ).length;
   const followUpCount = campaigns.filter(
     (campaign) => campaign.category === "Form follow-up",
   ).length;
@@ -231,6 +286,7 @@ export function getReminderStats(campaigns: ReminderCampaign[]) {
     totalRecipients,
     renewalCount,
     classCount,
+    zoomCount,
     followUpCount,
   };
 }
