@@ -533,6 +533,81 @@ export function buildInventoryTemplateWorkbook() {
   return workbook;
 }
 
+export function buildBillingWorkbook(data: AppData) {
+  const workbook = XLSX.utils.book_new();
+  const memberRows = data.profiles
+    .filter((profile) => profile.role === "member")
+    .map((profile) => {
+      const memberships = data.memberships.filter((membership) => membership.memberId === profile.id);
+      const invoices = data.invoices.filter((invoice) => invoice.memberId === profile.id);
+      const collectedAmount = invoices
+        .filter((invoice) => invoice.status === "Paid")
+        .reduce((sum, invoice) => sum + invoice.amountInr, 0);
+      const outstandingAmount = memberships.reduce(
+        (sum, membership) => sum + membership.outstandingAmountInr,
+        0,
+      );
+
+      return {
+        member_id: profile.id,
+        member_name: profile.fullName,
+        email: profile.email,
+        phone: profile.phone,
+        branch: profile.branch,
+        total_memberships: memberships.length,
+        collected_inr: collectedAmount,
+        outstanding_inr: outstandingAmount,
+        paid_invoices: invoices.filter((invoice) => invoice.status === "Paid").length,
+        pending_invoices: invoices.filter((invoice) => invoice.status === "Pending").length,
+        overdue_invoices: invoices.filter((invoice) => invoice.status === "Overdue").length,
+      };
+    });
+
+  const invoiceRows = data.invoices.map((invoice) => {
+    const member = data.profiles.find((profile) => profile.id === invoice.memberId);
+    const membership = data.memberships.find((item) => item.id === invoice.membershipId);
+
+    return {
+      id: invoice.id,
+      invoice_number: invoice.invoiceNumber,
+      member_id: invoice.memberId,
+      member_name: member?.fullName ?? "",
+      membership_id: invoice.membershipId,
+      plan_name: membership?.planName ?? "",
+      issued_on: invoice.issuedOn,
+      due_on: invoice.dueOn,
+      amount_inr: invoice.amountInr,
+      status: invoice.status,
+      paid_on: invoice.paidOn ?? "",
+      payment_method: invoice.paymentMethod ?? "",
+    };
+  });
+
+  const membershipRows = data.memberships.map((membership) => {
+    const member = data.profiles.find((profile) => profile.id === membership.memberId);
+
+    return {
+      id: membership.id,
+      member_id: membership.memberId,
+      member_name: member?.fullName ?? "",
+      plan_name: membership.planName,
+      status: membership.status,
+      billing_cycle: membership.billingCycle,
+      amount_inr: membership.amountInr,
+      payment_status: membership.paymentStatus,
+      last_payment_date: membership.lastPaymentDate,
+      next_invoice_date: membership.nextInvoiceDate,
+      outstanding_amount_inr: membership.outstandingAmountInr,
+    };
+  });
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(memberRows), "member_summary");
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(invoiceRows), "invoices");
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(membershipRows), "memberships");
+
+  return workbook;
+}
+
 export function parseMembersWorkbook(buffer: ArrayBuffer) {
   const workbook = XLSX.read(buffer, { type: "array" });
 
