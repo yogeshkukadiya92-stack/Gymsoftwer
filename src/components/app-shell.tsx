@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AppShellNav } from "@/components/app-shell-nav";
 import { Badge } from "@/components/badge";
 import { LogoutButton } from "@/components/logout-button";
 import { appConfig, hasSupabaseEnv } from "@/lib/env";
@@ -41,16 +42,8 @@ export function AppShell({
               <p className="max-w-2xl text-sm text-slate-300">{subtitle}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 text-sm">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-full border border-white/10 px-4 py-2 text-slate-100 transition hover:border-orange-300 hover:text-orange-100"
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="flex flex-wrap items-start gap-3 text-sm">
+            <AppShellNav navLinks={navLinks} />
             <LogoutButton />
           </div>
         </div>
