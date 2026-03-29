@@ -3,12 +3,14 @@ import path from "node:path";
 
 import { mockData } from "@/lib/mock-data";
 import {
+  createSupabaseGymBranch,
   insertSupabaseInventoryItem,
   insertSupabaseProgressCheckIn,
   insertSupabaseProgressPhoto,
   recordSupabaseInventorySale,
   restockSupabaseInventoryItem,
   updateSupabaseSessionZoomLink,
+  updateSupabaseGymBranch,
   upsertSupabaseAttendanceEntry,
   upsertSupabaseInventoryItems,
   upsertSupabaseProfiles,
@@ -75,6 +77,67 @@ export async function readAppDataStore(): Promise<AppData> {
 export async function writeAppDataStore(data: AppData) {
   await ensureStore();
   await writeFile(storePath, JSON.stringify(normalizeAppData(data), null, 2), "utf8");
+}
+
+export async function createGymBranch(input: Omit<GymBranch, "id">) {
+  try {
+    const supabaseBranch = await createSupabaseGymBranch(input);
+
+    if (supabaseBranch) {
+      return supabaseBranch;
+    }
+  } catch {
+    // Fall back to local store if the live branch table is not available yet.
+  }
+
+  const store = await readAppDataStore();
+  const branch: GymBranch = {
+    id: `branch-${crypto.randomUUID()}`,
+    ...input,
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    gymBranches: [branch, ...(store.gymBranches ?? [])],
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return branch;
+}
+
+export async function editGymBranch(id: string, input: Omit<GymBranch, "id">) {
+  try {
+    const supabaseBranch = await updateSupabaseGymBranch(id, input);
+
+    if (supabaseBranch) {
+      return supabaseBranch;
+    }
+  } catch {
+    // Fall back to local store if the live branch table is not available yet.
+  }
+
+  const store = await readAppDataStore();
+  const existing = (store.gymBranches ?? []).find((branch) => branch.id === id);
+
+  if (!existing) {
+    throw new Error("Branch not found.");
+  }
+
+  const branch: GymBranch = {
+    ...existing,
+    ...input,
+    id,
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    gymBranches: (store.gymBranches ?? []).map((item) => (item.id === id ? branch : item)),
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return branch;
 }
 
 export async function importMembersToAppData(members: Profile[]) {

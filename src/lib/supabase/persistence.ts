@@ -263,6 +263,18 @@ function mapLeadRow(row: Record<string, unknown>): LeadRecord {
   };
 }
 
+function mapGymBranchRow(row: Record<string, unknown>): GymBranch {
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+    city: String(row.city ?? ""),
+    address: String(row.address ?? ""),
+    managerName: String(row.manager_name ?? ""),
+    phone: String(row.phone ?? ""),
+    kind: (row.kind ?? "Physical") as GymBranch["kind"],
+  };
+}
+
 function mapDietPlanRow(row: Record<string, unknown>): DietPlanRecord {
   const meals = Array.isArray(row.meals) ? row.meals : [];
 
@@ -369,6 +381,8 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
     return null;
   }
 
+  const branchesResult = await supabase.from("gym_branches").select("*");
+
   const mappedProfiles = (profiles.data ?? []).map((row) => mapProfileRow(row as Record<string, unknown>));
   const mappedSessions = (sessions.data ?? []).map((row) => mapSessionRow(row as Record<string, unknown>));
   const derivedBranches = Array.from(
@@ -385,6 +399,16 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
         kind: "Physical",
       }) satisfies GymBranch,
   );
+  const mappedBranchRows = branchesResult.error
+    ? []
+    : (branchesResult.data ?? []).map((row) => mapGymBranchRow(row as Record<string, unknown>));
+  const branchMap = new Map<string, GymBranch>();
+
+  [...mappedBranchRows, ...derivedBranches].forEach((branch) => {
+    if (!branchMap.has(branch.id)) {
+      branchMap.set(branch.id, branch);
+    }
+  });
   const derivedVisits = (attendance.data ?? []).flatMap((row) => {
     const entry = mapAttendanceRow(row as Record<string, unknown>);
     const session = mappedSessions.find((item) => item.id === entry.sessionId);
@@ -407,7 +431,7 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
 
   return {
     profiles: mappedProfiles,
-    gymBranches: derivedBranches,
+    gymBranches: Array.from(branchMap.values()),
     branchVisits: derivedVisits,
     memberships: (memberships.data ?? []).map((row) =>
       mapMembershipRow(row as Record<string, unknown>),
@@ -440,6 +464,61 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
       mapAttendanceRow(row as Record<string, unknown>),
     ),
   };
+}
+
+export async function createSupabaseGymBranch(input: Omit<GymBranch, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const branch: GymBranch = {
+    id: `branch-${crypto.randomUUID()}`,
+    ...input,
+  };
+
+  const { error } = await supabase.from("gym_branches").insert({
+    id: branch.id,
+    name: branch.name,
+    city: branch.city,
+    address: branch.address,
+    manager_name: branch.managerName,
+    phone: branch.phone,
+    kind: branch.kind,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return branch;
+}
+
+export async function updateSupabaseGymBranch(id: string, input: Omit<GymBranch, "id">) {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const branch: GymBranch = { id, ...input };
+
+  const { error } = await supabase
+    .from("gym_branches")
+    .update({
+      name: branch.name,
+      city: branch.city,
+      address: branch.address,
+      manager_name: branch.managerName,
+      phone: branch.phone,
+      kind: branch.kind,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return branch;
 }
 
 export async function getSupabaseFormsStore(): Promise<FormsStore | null> {

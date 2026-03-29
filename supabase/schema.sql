@@ -9,6 +9,16 @@ create table if not exists profiles (
   joined_on date not null default now()
 );
 
+create table if not exists gym_branches (
+  id text primary key,
+  name text not null,
+  city text not null default '',
+  address text not null default '',
+  manager_name text not null default '',
+  phone text not null default '',
+  kind text not null check (kind in ('Physical', 'Online'))
+);
+
 create table if not exists memberships (
   id text primary key,
   member_id text not null references profiles(id) on delete cascade,
