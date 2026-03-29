@@ -1015,6 +1015,8 @@ export function parseImportWorkbook(buffer: ArrayBuffer) {
 
   const data: AppData = {
     profiles,
+    gymBranches: [],
+    branchVisits: [],
     memberships,
     invoices,
     inventoryItems: [],

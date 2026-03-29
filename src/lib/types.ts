@@ -130,6 +130,25 @@ export type InventorySale = {
   paymentMethod: "UPI" | "Cash" | "Bank Transfer" | "Card";
 };
 
+export type GymBranch = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  managerName: string;
+  phone: string;
+  kind: "Physical" | "Online";
+};
+
+export type BranchVisit = {
+  id: string;
+  memberId: string;
+  branchId: string;
+  visitDate: string;
+  source: "Attendance" | "Membership" | "Walk-in" | "PT Session";
+  note: string;
+};
+
 export type ClassSession = {
   id: string;
   title: string;
@@ -138,6 +157,7 @@ export type ClassSession = {
   time: string;
   capacity: number;
   room: string;
+  branchId?: string;
   zoomLink?: string;
 };
 
@@ -161,6 +181,8 @@ export type Profile = {
 
 export type AppData = {
   profiles: Profile[];
+  gymBranches: GymBranch[];
+  branchVisits: BranchVisit[];
   memberships: Membership[];
   invoices: Invoice[];
   inventoryItems: InventoryItem[];

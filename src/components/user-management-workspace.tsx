@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { Profile } from "@/lib/types";
+import { getUserBranchHistory } from "@/lib/branch-utils";
+import { AppData, Profile } from "@/lib/types";
 
 type UserManagementWorkspaceProps = {
   initialUsers: Profile[];
+  gymBranches: AppData["gymBranches"];
+  branchVisits: AppData["branchVisits"];
+  sessions: AppData["sessions"];
+  memberships: AppData["memberships"];
 };
 
 export function UserManagementWorkspace({
   initialUsers,
+  gymBranches,
+  branchVisits,
+  sessions,
+  memberships,
 }: UserManagementWorkspaceProps) {
   const [users, setUsers] = useState(initialUsers);
+  const [selectedUserId, setSelectedUserId] = useState(initialUsers[0]?.id ?? "");
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formState, setFormState] = useState({
     id: "",
@@ -28,6 +38,21 @@ export function UserManagementWorkspace({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+
+  const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
+  const selectedUserBranchHistory = useMemo(() => {
+    if (!selectedUser) {
+      return null;
+    }
+
+    return getUserBranchHistory(
+      selectedUser,
+      gymBranches,
+      branchVisits,
+      sessions,
+      memberships,
+    );
+  }, [branchVisits, gymBranches, memberships, selectedUser, sessions]);
 
   function resetForm() {
     setEditingUserId(null);
@@ -54,6 +79,9 @@ export function UserManagementWorkspace({
     }
 
     setUsers(payload.users);
+    if (!selectedUserId && payload.users.length > 0) {
+      setSelectedUserId(payload.users[0].id);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -99,6 +127,7 @@ export function UserManagementWorkspace({
         ? current.map((user) => (user.id === payload.user?.id ? nextUser : user))
         : [nextUser, ...current],
     );
+    setSelectedUserId(payload.user.id);
     resetForm();
     setStatusMessage(payload.message ?? (editingUserId ? "User updated." : "User created."));
     setIsSubmitting(false);
@@ -106,6 +135,7 @@ export function UserManagementWorkspace({
 
   function handleEdit(user: Profile) {
     setEditingUserId(user.id);
+    setSelectedUserId(user.id);
     setFormState({
       id: user.id,
       currentEmail: user.email,
@@ -140,9 +170,13 @@ export function UserManagementWorkspace({
       return;
     }
 
-    setUsers((current) => current.filter((item) => item.id !== user.id));
+    const remainingUsers = users.filter((item) => item.id !== user.id);
+    setUsers(remainingUsers);
     if (editingUserId === user.id) {
       resetForm();
+    }
+    if (selectedUserId === user.id) {
+      setSelectedUserId(remainingUsers[0]?.id ?? "");
     }
     setStatusMessage(payload.message ?? "User deleted.");
     setIsDeleting(null);
@@ -229,7 +263,7 @@ export function UserManagementWorkspace({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
         <form
           onSubmit={handleSubmit}
           className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]"
@@ -333,7 +367,16 @@ export function UserManagementWorkspace({
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
           <div className="mt-4 space-y-3">
             {users.map((user) => (
-              <div key={user.id} className="rounded-[1.25rem] bg-slate-50 p-4">
+              <button
+                type="button"
+                key={user.id}
+                onClick={() => setSelectedUserId(user.id)}
+                className={`block w-full rounded-[1.25rem] p-4 text-left transition ${
+                  selectedUserId === user.id
+                    ? "border border-orange-200 bg-orange-50"
+                    : "border border-transparent bg-slate-50 hover:border-slate-200"
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-950">{user.fullName}</p>
@@ -344,28 +387,101 @@ export function UserManagementWorkspace({
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-slate-500">
-                  {user.branch || "No branch"} • {user.phone || "No phone"}
+                  {user.branch || "No branch"} - {user.phone || "No phone"}
                 </p>
                 <div className="mt-3 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => handleEdit(user)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleEdit(user);
+                    }}
                     className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(user)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDelete(user);
+                    }}
                     disabled={isDeleting === user.id}
                     className="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
                   >
                     {isDeleting === user.id ? "Deleting..." : "Delete"}
                   </button>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+          <h3 className="font-serif text-2xl text-slate-950">User branch history</h3>
+          {selectedUser && selectedUserBranchHistory ? (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-[1.25rem] bg-slate-50 p-4">
+                <p className="font-semibold text-slate-950">{selectedUser.fullName}</p>
+                <p className="mt-1 text-sm text-slate-600">{selectedUser.email}</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-white p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-orange-600">Home branch</p>
+                    <p className="mt-2 font-medium text-slate-950">
+                      {selectedUserBranchHistory.homeBranch?.name ?? selectedUser.branch ?? "Not assigned"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-orange-600">Visited gyms</p>
+                    <p className="mt-2 font-medium text-slate-950">
+                      {selectedUserBranchHistory.totalVisitedBranches}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Total visits: {selectedUserBranchHistory.totalVisits}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-slate-500">
+                  Membership: {selectedUserBranchHistory.activeMembershipStatus}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {selectedUserBranchHistory.branchSummary.length > 0 ? (
+                  selectedUserBranchHistory.branchSummary.map((entry) => (
+                    <div key={entry.branch?.id ?? entry.lastVisit} className="rounded-[1.25rem] bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-950">
+                            {entry.branch?.name ?? "Unknown branch"}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            Last visit: {entry.lastVisit}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                          {entry.count} visits
+                        </span>
+                      </div>
+                      {entry.notes.length > 0 ? (
+                        <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                          {entry.notes.slice(0, 3).map((note) => (
+                            <li key={note}>{note}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-500">
+                    Aa user mate cross-branch visit data haju nathi. Home branch data upar dekhay chhe.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">Select a user to view branch activity.</p>
+          )}
         </div>
       </div>
     </div>

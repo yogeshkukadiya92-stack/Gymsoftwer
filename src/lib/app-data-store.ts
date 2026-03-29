@@ -17,7 +17,9 @@ import {
 import {
   AppData,
   Attendance,
+  BranchVisit,
   ClassSession,
+  GymBranch,
   InventoryItem,
   InventorySale,
   Profile,
@@ -31,6 +33,8 @@ const storePath = path.join(dataDirectory, "app-data.json");
 function normalizeAppData(data: AppData): AppData {
   return {
     ...data,
+    gymBranches: (data.gymBranches ?? []) as GymBranch[],
+    branchVisits: (data.branchVisits ?? []) as BranchVisit[],
     invoices: data.invoices ?? [],
     inventoryItems: (data.inventoryItems ?? []).map((item) => ({
       ...item,
@@ -46,6 +50,7 @@ function normalizeAppData(data: AppData): AppData {
     progressPhotos: data.progressPhotos ?? [],
     sessions: (data.sessions ?? []).map((session) => ({
       ...session,
+      branchId: session.branchId ?? "",
       zoomLink: session.zoomLink ?? "",
     })),
   };

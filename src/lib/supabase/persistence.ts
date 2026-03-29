@@ -1,7 +1,9 @@
 import {
   AppData,
   Attendance,
+  BranchVisit,
   ClassSession,
+  GymBranch,
   InventoryItem,
   InventorySale,
   ProgressCheckIn,
@@ -219,6 +221,7 @@ function mapSessionRow(row: Record<string, unknown>): AppData["sessions"][number
     time: String(row.time ?? ""),
     capacity: Number(row.capacity ?? 0),
     room: String(row.room ?? ""),
+    branchId: String(row.branch_id ?? ""),
     zoomLink: String(row.zoom_link ?? ""),
   };
 }
@@ -366,8 +369,46 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
     return null;
   }
 
+  const mappedProfiles = (profiles.data ?? []).map((row) => mapProfileRow(row as Record<string, unknown>));
+  const mappedSessions = (sessions.data ?? []).map((row) => mapSessionRow(row as Record<string, unknown>));
+  const derivedBranches = Array.from(
+    new Set(mappedProfiles.map((profile) => profile.branch).filter(Boolean)),
+  ).map(
+    (name) =>
+      ({
+        id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        name,
+        city: "",
+        address: "",
+        managerName: "",
+        phone: "",
+        kind: "Physical",
+      }) satisfies GymBranch,
+  );
+  const derivedVisits = (attendance.data ?? []).flatMap((row) => {
+    const entry = mapAttendanceRow(row as Record<string, unknown>);
+    const session = mappedSessions.find((item) => item.id === entry.sessionId);
+
+    if (!session?.branchId || entry.status === "Missed") {
+      return [];
+    }
+
+    return [
+      {
+        id: `visit-${entry.id}`,
+        memberId: entry.memberId,
+        branchId: session.branchId,
+        visitDate: new Date().toISOString().slice(0, 10),
+        source: "Attendance",
+        note: `${session.title} ${entry.status.toLowerCase()}.`,
+      } satisfies BranchVisit,
+    ];
+  });
+
   return {
-    profiles: (profiles.data ?? []).map((row) => mapProfileRow(row as Record<string, unknown>)),
+    profiles: mappedProfiles,
+    gymBranches: derivedBranches,
+    branchVisits: derivedVisits,
     memberships: (memberships.data ?? []).map((row) =>
       mapMembershipRow(row as Record<string, unknown>),
     ),
@@ -394,7 +435,7 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
     progressPhotos: (progressPhotos.data ?? []).map((row) =>
       mapProgressPhotoRow(row as Record<string, unknown>),
     ),
-    sessions: (sessions.data ?? []).map((row) => mapSessionRow(row as Record<string, unknown>)),
+    sessions: mappedSessions,
     attendance: (attendance.data ?? []).map((row) =>
       mapAttendanceRow(row as Record<string, unknown>),
     ),

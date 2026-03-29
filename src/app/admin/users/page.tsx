@@ -15,7 +15,13 @@ export default async function AdminUsersPage() {
       navLinks={adminNavLinks}
     >
       <SectionCard eyebrow="Accounts" title="Roles and access">
-        <UserManagementWorkspace initialUsers={data.profiles} />
+        <UserManagementWorkspace
+          initialUsers={data.profiles}
+          gymBranches={data.gymBranches}
+          branchVisits={data.branchVisits}
+          sessions={data.sessions}
+          memberships={data.memberships}
+        />
       </SectionCard>
     </AppShell>
   );
