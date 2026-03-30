@@ -31,6 +31,9 @@ export function UserManagementWorkspace({
   const [userPermissions, setUserPermissions] = useState(initialUserPermissions);
   const [selectedUserId, setSelectedUserId] = useState(initialUsers[0]?.id ?? "");
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "member" | "trainer" | "admin">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "reset" | "not-ready">("all");
   const [formState, setFormState] = useState({
     id: "",
     currentEmail: "",
@@ -48,6 +51,29 @@ export function UserManagementWorkspace({
   const [isImporting, setIsImporting] = useState(false);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const search = searchQuery.trim().toLowerCase();
+      const permissionLabel = userPermissions.find((entry) => entry.userId === user.id)?.accessLabel?.toLowerCase() ?? "";
+      const loginStatus = loginStatuses.find((entry) => entry.userId === user.id);
+
+      const matchesSearch =
+        !search ||
+        user.fullName.toLowerCase().includes(search) ||
+        user.email.toLowerCase().includes(search) ||
+        user.phone.toLowerCase().includes(search) ||
+        permissionLabel.includes(search);
+
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "ready" && loginStatus?.loginReady && !loginStatus.mustResetPassword) ||
+        (statusFilter === "reset" && loginStatus?.mustResetPassword) ||
+        (statusFilter === "not-ready" && !loginStatus?.loginReady);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [loginStatuses, roleFilter, searchQuery, statusFilter, userPermissions, users]);
   const selectedUserLoginStatus =
     loginStatuses.find((status) => status.userId === selectedUser?.id) ?? null;
   const selectedUserBranchHistory = useMemo(() => {
@@ -388,11 +414,45 @@ export function UserManagementWorkspace({
 
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
-          <div className="mt-4 space-y-3">
-            {users.map((user) => (
-              <button
-                type="button"
-                key={user.id}
+        <div className="mt-4 space-y-3">
+          <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+            <input
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+              placeholder="Search by name, email, phone, or access label"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                value={roleFilter}
+                onChange={(event) =>
+                  setRoleFilter(event.target.value as "all" | "member" | "trainer" | "admin")
+                }
+              >
+                <option value="all">All roles</option>
+                <option value="member">Member</option>
+                <option value="trainer">Trainer</option>
+                <option value="admin">Admin</option>
+              </select>
+              <select
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as "all" | "ready" | "reset" | "not-ready")
+                }
+              >
+                <option value="all">All login states</option>
+                <option value="ready">Login ready</option>
+                <option value="reset">Must reset password</option>
+                <option value="not-ready">Login not ready</option>
+              </select>
+            </div>
+          </div>
+          {filteredUsers.map((user) => (
+            <button
+              type="button"
+              key={user.id}
                 onClick={() => setSelectedUserId(user.id)}
                 className={`block w-full rounded-[1.25rem] p-4 text-left transition ${
                   selectedUserId === user.id
@@ -471,8 +531,13 @@ export function UserManagementWorkspace({
                 </div>
               </button>
             ))}
-          </div>
+          {filteredUsers.length === 0 ? (
+            <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+              No users match the current search or filters.
+            </div>
+          ) : null}
         </div>
+      </div>
 
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <h3 className="font-serif text-2xl text-slate-950">User branch history</h3>
