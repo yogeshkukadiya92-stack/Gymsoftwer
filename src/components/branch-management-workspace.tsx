@@ -30,6 +30,11 @@ export function BranchManagementWorkspace({
   initialBranches,
 }: BranchManagementWorkspaceProps) {
   const [branches, setBranches] = useState(initialBranches);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<GymBranch["kind"] | "All branch types">(
+    "All branch types",
+  );
+  const [sortBy, setSortBy] = useState<"name" | "city" | "membersHigh" | "visitsHigh">("name");
   const [formState, setFormState] = useState(emptyForm);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,6 +48,50 @@ export function BranchManagementWorkspace({
     }),
     [branches],
   );
+  const filteredBranches = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+
+    return [...branches]
+      .filter(({ branch }) => {
+        const matchesSearch =
+          !normalized ||
+          [branch.name, branch.city, branch.address, branch.managerName, branch.phone]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalized);
+        const matchesKind = kindFilter === "All branch types" || branch.kind === kindFilter;
+
+        return matchesSearch && matchesKind;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "membersHigh":
+            return b.members.length - a.members.length || a.branch.name.localeCompare(b.branch.name);
+          case "visitsHigh":
+            return b.visits.length - a.visits.length || a.branch.name.localeCompare(b.branch.name);
+          case "city":
+            return a.branch.city.localeCompare(b.branch.city) || a.branch.name.localeCompare(b.branch.name);
+          case "name":
+          default:
+            return a.branch.name.localeCompare(b.branch.name);
+        }
+      });
+  }, [branches, kindFilter, searchQuery, sortBy]);
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
+
+    if (kindFilter !== "All branch types") {
+      params.set("kind", kindFilter);
+    }
+
+    params.set("sort", sortBy);
+
+    return `/api/admin/branches/export?${params.toString()}`;
+  }, [kindFilter, searchQuery, sortBy]);
 
   function resetForm() {
     setFormState(emptyForm);
@@ -208,7 +257,50 @@ export function BranchManagementWorkspace({
         </form>
 
         <div className="space-y-6">
-          {branches.map(({ branch, members, sessions, visits, activeMemberships }) => (
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+            <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by branch, city, manager, or phone"
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              />
+              <select
+                value={kindFilter}
+                onChange={(event) =>
+                  setKindFilter(event.target.value as GymBranch["kind"] | "All branch types")
+                }
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              >
+                <option value="All branch types">All branch types</option>
+                <option value="Physical">Physical</option>
+                <option value="Online">Online</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(event.target.value as "name" | "city" | "membersHigh" | "visitsHigh")
+                }
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              >
+                <option value="name">Sort: Name</option>
+                <option value="city">Sort: City</option>
+                <option value="membersHigh">Sort: Most members</option>
+                <option value="visitsHigh">Sort: Most visits</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = filteredExportUrl;
+                }}
+                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
+              >
+                Export current view
+              </button>
+            </div>
+          </div>
+          {filteredBranches.map(({ branch, members, sessions, visits, activeMemberships }) => (
             <div
               key={branch.id}
               className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]"
@@ -247,6 +339,11 @@ export function BranchManagementWorkspace({
               </div>
             </div>
           ))}
+          {filteredBranches.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white p-5 text-sm text-slate-500">
+              No branches match the current filters.
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

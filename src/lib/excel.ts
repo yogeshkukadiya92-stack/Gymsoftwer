@@ -6,6 +6,7 @@ import {
   AppData,
   Attendance,
   ClassSession,
+  Exercise,
   InventoryItem,
   InventorySale,
   Profile,
@@ -430,6 +431,70 @@ export function buildUserPermissionsWorkbook(
   });
 
   XLSX.utils.book_append_sheet(workbook, toJsonSheet(permissionRows), "user_permissions");
+
+  return workbook;
+}
+
+export function buildBranchesWorkbook(
+  branches: Array<{
+    id: string;
+    name: string;
+    city: string;
+    address: string;
+    managerName: string;
+    phone: string;
+    kind: string;
+    memberCount: number;
+    sessionCount: number;
+    visitCount: number;
+    activeMemberships: number;
+  }>,
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      branches.map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        city: branch.city,
+        address: branch.address,
+        manager_name: branch.managerName,
+        phone: branch.phone,
+        kind: branch.kind,
+        member_count: branch.memberCount,
+        session_count: branch.sessionCount,
+        visit_count: branch.visitCount,
+        active_memberships: branch.activeMemberships,
+      })),
+    ),
+    "branches",
+  );
+
+  return workbook;
+}
+
+export function buildExercisesWorkbook(exercises: Exercise[]) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        category: exercise.category,
+        difficulty: exercise.difficulty,
+        primary_muscle: exercise.primaryMuscle,
+        equipment: exercise.equipment,
+        media_type: exercise.mediaType,
+        media_url: exercise.mediaUrl,
+        cues: exercise.cues.join(", "),
+      })),
+    ),
+    "exercises",
+  );
 
   return workbook;
 }
