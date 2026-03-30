@@ -782,6 +782,13 @@ export function FormsWorkspace({
             </div>
             {selectedForm ? (
               <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => loadFormIntoBuilder(selectedForm)}
+                  className={secondaryButtonClassName}
+                >
+                  Edit selected form
+                </button>
                 <Link href={`/forms/${selectedForm.slug}`} className={primaryButtonClassName}>
                   Open public form
                 </Link>
@@ -800,6 +807,9 @@ export function FormsWorkspace({
             <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
               <p className="font-semibold text-slate-950">Public form link</p>
               <p className="mt-2 break-all">{selectedFormShareUrl}</p>
+              <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">
+                Existing forms can be edited any time from this preview or from the forms list.
+              </p>
             </div>
           ) : null}
           <div className="mt-5 grid gap-3">
