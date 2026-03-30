@@ -83,7 +83,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className={`rounded-full border px-4 py-2 transition ${
+              className={`rounded-full border px-4 py-2.5 font-medium transition ${
                 active
                   ? "border-orange-300 bg-orange-500/15 text-orange-100 shadow-[0_0_0_1px_rgba(253,186,116,0.2)]"
                   : "border-white/10 text-slate-100 hover:border-orange-300 hover:text-orange-100"
@@ -102,7 +102,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         {groupedLinks.map((group) => {
           const activeCategory = selectedCategory === group.category;
 
@@ -111,7 +111,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
               key={group.category}
               type="button"
               onClick={() => setSelectedCategory(group.category)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium uppercase tracking-[0.18em] transition ${
+              className={`rounded-full border px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.16em] transition ${
                 activeCategory
                   ? "border-orange-300 bg-orange-500/15 text-orange-100 shadow-[0_0_0_1px_rgba(253,186,116,0.2)]"
                   : "border-white/10 text-slate-200 hover:border-orange-300 hover:text-orange-100"
@@ -123,7 +123,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
         })}
       </div>
 
-      <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-3 backdrop-blur">
+      <div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-3 backdrop-blur">
         <div className="flex flex-wrap gap-2">
           {visibleGroup.links.map((link) => {
             const active = getMatchScore(pathname, link.href) >= 0;
@@ -133,7 +133,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-full border px-4 py-2 transition ${
+                className={`rounded-full border px-4 py-2.5 font-medium transition ${
                   active
                     ? "border-orange-300 bg-orange-500/15 text-orange-100 shadow-[0_0_0_1px_rgba(253,186,116,0.2)]"
                     : "border-white/10 text-slate-100 hover:border-orange-300 hover:text-orange-100"

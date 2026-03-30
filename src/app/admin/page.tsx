@@ -52,13 +52,13 @@ export default async function AdminDashboardPage() {
         <div className="grid gap-6">
           <SectionCard eyebrow="Today" title="Operational focus">
             <div className="space-y-4 text-slate-700">
-              <div className="rounded-[1.5rem] bg-slate-50 p-4">
+              <div className="rounded-[1.5rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-orange-50/60 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
                 <p className="font-semibold text-slate-950">Review expiring memberships</p>
                 <p className="mt-2 text-sm text-slate-600">
                   Payment is intentionally deferred, so staff-only tracking needs to stay visible.
                 </p>
               </div>
-              <div className="rounded-[1.5rem] bg-slate-50 p-4">
+              <div className="rounded-[1.5rem] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-sky-50/60 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
                 <p className="font-semibold text-slate-950">Assign plans after assessment</p>
                 <p className="mt-2 text-sm text-slate-600">
                   Program templates can be attached to members immediately after onboarding.
@@ -74,13 +74,15 @@ export default async function AdminDashboardPage() {
                 .map((profile) => (
                   <div
                     key={profile.id}
-                    className="flex flex-col gap-2 rounded-[1.5rem] border border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex flex-col gap-2 rounded-[1.5rem] border border-slate-200/80 bg-gradient-to-r from-white via-white to-slate-50/80 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)] transition-transform duration-200 hover:-translate-y-0.5 lg:flex-row lg:items-center lg:justify-between"
                   >
                     <div>
                       <p className="font-semibold text-slate-950">{profile.fullName}</p>
                       <p className="text-sm text-slate-600">{profile.fitnessGoal}</p>
                     </div>
-                    <p className="text-sm text-slate-500">{profile.branch}</p>
+                    <p className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-500">
+                      {profile.branch}
+                    </p>
                   </div>
                 ))}
             </div>

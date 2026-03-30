@@ -9,10 +9,10 @@ type StatCardProps = {
 
 export function StatCard({ label, value, detail, href }: StatCardProps) {
   const content = (
-    <div className="rounded-[1.5rem] border border-white/10 bg-slate-900 p-5 text-white shadow-lg shadow-slate-950/20 transition hover:-translate-y-1 hover:border-orange-300/40 hover:shadow-2xl hover:shadow-slate-950/30">
-      <p className="text-sm uppercase tracking-[0.24em] text-slate-400">{label}</p>
-      <p className="mt-4 text-4xl font-semibold">{value}</p>
-      <p className="mt-3 text-sm text-slate-300">{detail}</p>
+    <div className="rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,18,30,0.98),rgba(13,26,42,0.94))] p-5 text-white shadow-[0_22px_60px_rgba(2,8,23,0.28)] transition duration-200 hover:-translate-y-1 hover:border-orange-300/40 hover:shadow-[0_28px_70px_rgba(2,8,23,0.34)]">
+      <p className="text-[0.72rem] uppercase tracking-[0.28em] text-slate-400">{label}</p>
+      <p className="mt-4 text-[2.35rem] font-semibold leading-none">{value}</p>
+      <p className="mt-3 text-sm leading-6 text-slate-300">{detail}</p>
     </div>
   );
 
