@@ -1,3 +1,4 @@
+import { getAuthenticatedProfile } from "@/lib/auth";
 import { hasSupabaseEnv } from "@/lib/env";
 import { mockData } from "@/lib/mock-data";
 import { readAppDataStore } from "@/lib/app-data-store";
@@ -50,7 +51,11 @@ export async function getAppData() {
 
 export async function getDashboardData(role: UserRole): Promise<DashboardData> {
   const data = await getAppData();
+  const authenticatedProfile = hasSupabaseEnv ? await getAuthenticatedProfile() : null;
   const viewer =
+    (authenticatedProfile && authenticatedProfile.role === role
+      ? data.profiles.find((profile) => profile.email === authenticatedProfile.email) ?? authenticatedProfile
+      : null) ??
     data.profiles.find((profile) => profile.role === role) ??
     data.profiles[0] ??
     buildFallbackViewer(role);
