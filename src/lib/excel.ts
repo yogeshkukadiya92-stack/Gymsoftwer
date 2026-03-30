@@ -499,6 +499,130 @@ export function buildExercisesWorkbook(exercises: Exercise[]) {
   return workbook;
 }
 
+export function buildScheduleWorkbook(
+  rows: Array<{
+    id: string;
+    title: string;
+    day: string;
+    time: string;
+    coach: string;
+    branch: string;
+    room: string;
+    capacity: number;
+    registeredCount: number;
+    presentCount: number;
+    missedCount: number;
+    zoomReady: string;
+  }>,
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        day: row.day,
+        time: row.time,
+        coach: row.coach,
+        branch: row.branch,
+        room: row.room,
+        capacity: row.capacity,
+        registered_count: row.registeredCount,
+        present_count: row.presentCount,
+        missed_count: row.missedCount,
+        zoom_ready: row.zoomReady,
+      })),
+    ),
+    "schedule",
+  );
+
+  return workbook;
+}
+
+export function buildMembershipsWorkbook(
+  rows: Array<{
+    memberName: string;
+    email: string;
+    branch: string;
+    planName: string;
+    status: string;
+    billingCycle: string;
+    paymentStatus: string;
+    amountInr: number;
+    outstandingAmountInr: number;
+    renewalDate: string;
+    nextInvoiceDate: string;
+    paymentMethod: string;
+  }>,
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      rows.map((row) => ({
+        member_name: row.memberName,
+        email: row.email,
+        branch: row.branch,
+        plan_name: row.planName,
+        status: row.status,
+        billing_cycle: row.billingCycle,
+        payment_status: row.paymentStatus,
+        amount_inr: row.amountInr,
+        outstanding_amount_inr: row.outstandingAmountInr,
+        renewal_date: row.renewalDate,
+        next_invoice_date: row.nextInvoiceDate,
+        payment_method: row.paymentMethod,
+      })),
+    ),
+    "memberships",
+  );
+
+  return workbook;
+}
+
+export function buildProgressWorkbook(
+  rows: Array<{
+    memberName: string;
+    branch: string;
+    fitnessGoal: string;
+    latestDate: string;
+    latestWeightKg: number;
+    firstWeightKg: number;
+    weightDeltaKg: number;
+    waistCm: number;
+    energyLevel: string;
+    photoCount: number;
+    coachNote: string;
+  }>,
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      rows.map((row) => ({
+        member_name: row.memberName,
+        branch: row.branch,
+        fitness_goal: row.fitnessGoal,
+        latest_date: row.latestDate,
+        latest_weight_kg: row.latestWeightKg,
+        first_weight_kg: row.firstWeightKg,
+        weight_delta_kg: row.weightDeltaKg,
+        waist_cm: row.waistCm,
+        energy_level: row.energyLevel,
+        photo_count: row.photoCount,
+        coach_note: row.coachNote,
+      })),
+    ),
+    "progress",
+  );
+
+  return workbook;
+}
+
 export function buildLeadsWorkbook(leads: LeadRecord[]) {
   const workbook = XLSX.utils.book_new();
 

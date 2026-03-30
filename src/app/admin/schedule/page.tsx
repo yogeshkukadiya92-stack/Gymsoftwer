@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { ScheduleReportWorkspace } from "@/components/schedule-report-workspace";
 import { SectionCard } from "@/components/section-card";
 import { SessionZoomManager } from "@/components/session-zoom-manager";
 import { WorkshopAttendanceManager } from "@/components/workshop-attendance-manager";
@@ -55,6 +56,12 @@ export default async function AdminSchedulePage() {
       </div>
 
       <div className="mt-6">
+        <SectionCard eyebrow="Filter and export" title="Schedule view">
+          <ScheduleReportWorkspace sessions={data.sessions} attendance={data.attendance} />
+        </SectionCard>
+      </div>
+
+      <div className="mt-6">
         <SessionZoomManager sessions={data.sessions} />
       </div>
 
@@ -64,36 +71,6 @@ export default async function AdminSchedulePage() {
           attendance={data.attendance}
           members={members}
         />
-      </div>
-
-      <div className="mt-6">
-        <SectionCard eyebrow="Session view" title="Weekly workshop schedule">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {data.sessions.map((session) => {
-              const activeCount = data.attendance.filter(
-                (entry) => entry.sessionId === session.id && entry.status !== "Missed",
-              ).length;
-
-              return (
-                <div key={session.id} className="rounded-[1.5rem] border border-slate-200 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
-                    {session.day}
-                  </p>
-                  <h2 className="mt-2 font-serif text-2xl text-slate-950">{session.title}</h2>
-                  <p className="mt-2 text-slate-700">
-                    {session.time} with {session.coach}
-                  </p>
-                  <p className="mt-3 text-sm text-slate-500">
-                    {activeCount}/{session.capacity} registered | {session.room}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {session.zoomLink ? "Zoom link ready for members" : "Zoom link not added yet"}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
       </div>
     </AppShell>
   );
