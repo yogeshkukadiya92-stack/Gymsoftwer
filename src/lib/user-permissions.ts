@@ -19,7 +19,33 @@ export const trainerPortalRoutes: PermissionOption[] = [
   { href: "/trainer/schedule", label: "Schedule" },
 ];
 
+export const adminPortalRoutes: PermissionOption[] = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/user-permissions", label: "Permissions" },
+  { href: "/admin/crm", label: "Lead CRM" },
+  { href: "/admin/memberships", label: "Memberships" },
+  { href: "/admin/progress", label: "Progress" },
+  { href: "/admin/attendance", label: "Attendance" },
+  { href: "/admin/form-responses", label: "Form responses" },
+  { href: "/admin/exercises", label: "Exercise library" },
+  { href: "/admin/plans", label: "Workout plans" },
+  { href: "/admin/diet-planner", label: "Diet planner" },
+  { href: "/admin/schedule", label: "Schedule" },
+  { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/branches", label: "Branches" },
+  { href: "/admin/reminders", label: "Reminders" },
+  { href: "/admin/integrations", label: "Integrations" },
+  { href: "/admin/data-tools", label: "Data tools" },
+];
+
 export function getPermissionOptionsForRole(role: UserRole): PermissionOption[] {
+  if (role === "admin") {
+    return adminPortalRoutes;
+  }
+
   if (role === "trainer") {
     return trainerPortalRoutes;
   }

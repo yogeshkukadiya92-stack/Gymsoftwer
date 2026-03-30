@@ -14,10 +14,7 @@ export function UserPermissionsWorkspace({
   users,
   initialPermissions,
 }: UserPermissionsWorkspaceProps) {
-  const managedUsers = useMemo(
-    () => users.filter((user) => user.role !== "admin"),
-    [users],
-  );
+  const managedUsers = useMemo(() => users, [users]);
   const [permissions, setPermissions] = useState(initialPermissions);
   const [selectedUserId, setSelectedUserId] = useState(managedUsers[0]?.id ?? "");
   const [statusMessage, setStatusMessage] = useState("");

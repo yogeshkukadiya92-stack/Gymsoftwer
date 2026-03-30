@@ -3,8 +3,11 @@ import Link from "next/link";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { Badge } from "@/components/badge";
 import { LogoutButton } from "@/components/logout-button";
+import { getAuthenticatedProfile } from "@/lib/auth";
+import { getAppData } from "@/lib/data";
 import { appConfig, hasSupabaseEnv } from "@/lib/env";
 import { UserRole } from "@/lib/types";
+import { filterNavLinksByRoutes, getAllowedRoutesForProfile } from "@/lib/user-permissions";
 
 type NavLink = {
   href: string;
@@ -20,13 +23,26 @@ type AppShellProps = {
   navLinks: NavLink[];
 };
 
-export function AppShell({
+export async function AppShell({
   role,
   title,
   subtitle,
   children,
   navLinks,
 }: AppShellProps) {
+  let scopedNavLinks = navLinks;
+
+  if (hasSupabaseEnv) {
+    const [profile, data] = await Promise.all([getAuthenticatedProfile(), getAppData()]);
+
+    if (profile && profile.role === role) {
+      scopedNavLinks = filterNavLinksByRoutes(
+        navLinks,
+        getAllowedRoutesForProfile(profile, data.userPermissions),
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(240,127,45,0.18),_transparent_30%),linear-gradient(180deg,_#08131f_0%,_#102235_45%,_#f6efe4_45%,_#f6efe4_100%)]">
       <header className="border-b border-white/10 bg-slate-950/90 text-white backdrop-blur">
@@ -44,7 +60,7 @@ export function AppShell({
             </div>
           </div>
           <div className="grid flex-1 gap-3 text-sm lg:min-w-[640px]">
-            <AppShellNav navLinks={navLinks} />
+            <AppShellNav navLinks={scopedNavLinks} />
             <div className="flex justify-start lg:justify-end">
               <LogoutButton />
             </div>
