@@ -5,11 +5,12 @@ import { useMemo, useState } from "react";
 import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { getUserBranchHistory } from "@/lib/branch-utils";
 import { ManagedUserLoginStatus } from "@/lib/auth";
-import { AppData, Profile } from "@/lib/types";
+import { AppData, Profile, UserPermission } from "@/lib/types";
 
 type UserManagementWorkspaceProps = {
   initialUsers: Profile[];
   initialLoginStatuses: ManagedUserLoginStatus[];
+  initialUserPermissions: UserPermission[];
   gymBranches: AppData["gymBranches"];
   branchVisits: AppData["branchVisits"];
   sessions: AppData["sessions"];
@@ -19,6 +20,7 @@ type UserManagementWorkspaceProps = {
 export function UserManagementWorkspace({
   initialUsers,
   initialLoginStatuses,
+  initialUserPermissions,
   gymBranches,
   branchVisits,
   sessions,
@@ -26,6 +28,7 @@ export function UserManagementWorkspace({
 }: UserManagementWorkspaceProps) {
   const [users, setUsers] = useState(initialUsers);
   const [loginStatuses, setLoginStatuses] = useState(initialLoginStatuses);
+  const [userPermissions, setUserPermissions] = useState(initialUserPermissions);
   const [selectedUserId, setSelectedUserId] = useState(initialUsers[0]?.id ?? "");
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formState, setFormState] = useState({
@@ -81,6 +84,7 @@ export function UserManagementWorkspace({
     const payload = (await response.json()) as {
       users?: Profile[];
       loginStatuses?: ManagedUserLoginStatus[];
+      userPermissions?: UserPermission[];
       error?: string;
     };
 
@@ -91,6 +95,7 @@ export function UserManagementWorkspace({
 
     setUsers(payload.users);
     setLoginStatuses(payload.loginStatuses ?? []);
+    setUserPermissions(payload.userPermissions ?? []);
     if (!selectedUserId && payload.users.length > 0) {
       setSelectedUserId(payload.users[0].id);
     }
@@ -407,6 +412,13 @@ export function UserManagementWorkspace({
                 <p className="mt-2 text-sm text-slate-500">
                   {user.branch || "No branch"} - {user.phone || "No phone"}
                 </p>
+                {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel ? (
+                  <div className="mt-2">
+                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                      {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(() => {
                     const status = loginStatuses.find((entry) => entry.userId === user.id);

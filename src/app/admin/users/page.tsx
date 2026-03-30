@@ -20,6 +20,7 @@ export default async function AdminUsersPage() {
         <UserManagementWorkspace
           initialUsers={data.profiles}
           initialLoginStatuses={loginStatuses}
+          initialUserPermissions={data.userPermissions}
           gymBranches={data.gymBranches}
           branchVisits={data.branchVisits}
           sessions={data.sessions}

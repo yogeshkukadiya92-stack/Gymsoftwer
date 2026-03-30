@@ -16,6 +16,7 @@ export async function GET() {
   return Response.json({
     users: data.profiles,
     loginStatuses,
+    userPermissions: data.userPermissions,
   });
 }
 
