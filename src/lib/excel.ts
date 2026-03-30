@@ -329,20 +329,28 @@ export function buildMembersTemplateWorkbook() {
   return workbook;
 }
 
-export function buildUsersWorkbook(profiles: Profile[]) {
+export function buildUsersWorkbook(
+  profiles: Profile[],
+  options?: {
+    accessLabels?: Record<string, string>;
+    loginStatuses?: Record<string, string>;
+  },
+) {
   const workbook = XLSX.utils.book_new();
 
   const userRows = profiles.map((profile) => ({
-        id: profile.id,
-        current_email: profile.email,
-        full_name: profile.fullName,
-        email: profile.email,
-        password: DEFAULT_FIRST_LOGIN_PASSWORD,
-        role: profile.role,
+    id: profile.id,
+    current_email: profile.email,
+    full_name: profile.fullName,
+    email: profile.email,
+    password: DEFAULT_FIRST_LOGIN_PASSWORD,
+    role: profile.role,
     phone: profile.phone,
     fitness_goal: profile.fitnessGoal,
     branch: profile.branch,
     joined_on: profile.joinedOn,
+    access_label: options?.accessLabels?.[profile.id] ?? "",
+    login_status: options?.loginStatuses?.[profile.id] ?? "",
   }));
 
   XLSX.utils.book_append_sheet(workbook, toJsonSheet(userRows), "users");

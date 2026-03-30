@@ -34,6 +34,7 @@ export function UserManagementWorkspace({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "member" | "trainer" | "admin">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "reset" | "not-ready">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name_desc" | "role" | "branch">("newest");
   const [formState, setFormState] = useState({
     id: "",
     currentEmail: "",
@@ -52,7 +53,7 @@ export function UserManagementWorkspace({
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+    const result = users.filter((user) => {
       const search = searchQuery.trim().toLowerCase();
       const permissionLabel = userPermissions.find((entry) => entry.userId === user.id)?.accessLabel?.toLowerCase() ?? "";
       const loginStatus = loginStatuses.find((entry) => entry.userId === user.id);
@@ -73,7 +74,42 @@ export function UserManagementWorkspace({
 
       return matchesSearch && matchesRole && matchesStatus;
     });
-  }, [loginStatuses, roleFilter, searchQuery, statusFilter, userPermissions, users]);
+
+    switch (sortBy) {
+      case "name_desc":
+        result.sort((a, b) => b.fullName.localeCompare(a.fullName));
+        break;
+      case "role":
+        result.sort((a, b) => a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName));
+        break;
+      case "branch":
+        result.sort((a, b) => a.branch.localeCompare(b.branch) || a.fullName.localeCompare(b.fullName));
+        break;
+      case "oldest":
+        result.sort((a, b) => a.joinedOn.localeCompare(b.joinedOn));
+        break;
+      case "newest":
+      default:
+        result.sort((a, b) => b.joinedOn.localeCompare(a.joinedOn));
+        break;
+    }
+
+    return result;
+  }, [loginStatuses, roleFilter, searchQuery, sortBy, statusFilter, userPermissions, users]);
+
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
+
+    params.set("role", roleFilter);
+    params.set("status", statusFilter);
+    params.set("sort", sortBy);
+
+    return `/api/admin/users/export?${params.toString()}`;
+  }, [roleFilter, searchQuery, sortBy, statusFilter]);
   const selectedUserLoginStatus =
     loginStatuses.find((status) => status.userId === selectedUser?.id) ?? null;
   const selectedUserBranchHistory = useMemo(() => {
@@ -281,10 +317,10 @@ export function UserManagementWorkspace({
           </div>
           <div className="flex flex-wrap gap-3">
             <a
-              href="/api/admin/users/export"
+              href={filteredExportUrl}
               className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
             >
-              Export users Excel
+              Export filtered users Excel
             </a>
             <a
               href="/api/admin/users/template"
@@ -448,6 +484,21 @@ export function UserManagementWorkspace({
                 <option value="not-ready">Login not ready</option>
               </select>
             </div>
+            <select
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+              value={sortBy}
+              onChange={(event) =>
+                setSortBy(
+                  event.target.value as "newest" | "oldest" | "name_desc" | "role" | "branch",
+                )
+              }
+            >
+              <option value="newest">Sort by newest</option>
+              <option value="oldest">Sort by oldest</option>
+              <option value="name_desc">Sort by name</option>
+              <option value="role">Sort by role</option>
+              <option value="branch">Sort by branch</option>
+            </select>
           </div>
           {filteredUsers.map((user) => (
             <button
