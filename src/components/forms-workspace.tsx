@@ -21,6 +21,8 @@ import {
 } from "@/components/filter-toolbar";
 import {
   FieldCondition,
+  fieldTypeDefinitions,
+  fieldTypeNeedsOptions,
   IntakeForm,
   IntakeFormField,
   IntakeFormResponse,
@@ -44,16 +46,6 @@ type BuilderField = IntakeFormField & {
   conditionFieldId?: string;
   conditionEquals?: string;
 };
-
-const fieldTypeOptions: IntakeFormField["type"][] = [
-  "short_text",
-  "paragraph",
-  "phone",
-  "email",
-  "dropdown",
-  "multiple_choice",
-  "checkbox",
-];
 
 function makeFieldId() {
   return `field-${crypto.randomUUID()}`;
@@ -82,10 +74,7 @@ function toBuilderField(field: IntakeFormField): BuilderField {
 }
 
 function toFormField(field: BuilderField): IntakeFormField {
-  const supportsOptions =
-    field.type === "dropdown" ||
-    field.type === "multiple_choice" ||
-    field.type === "checkbox";
+  const supportsOptions = fieldTypeNeedsOptions(field.type);
 
   const condition: FieldCondition | undefined =
     field.conditionFieldId && field.conditionEquals
@@ -149,6 +138,7 @@ export function FormsWorkspace({
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<CreateFormResult | null>(null);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
+  const [fieldTypeSearch, setFieldTypeSearch] = useState("");
 
   const audienceOptions = useMemo(
     () => Array.from(new Set(forms.map((form) => form.audience).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
@@ -288,9 +278,36 @@ export function FormsWorkspace({
     createResult?.sharePath && typeof window !== "undefined"
       ? `${window.location.origin}${createResult.sharePath}`
       : createResult?.sharePath;
+  const selectedFormShareUrl =
+    selectedForm && typeof window !== "undefined"
+      ? `${window.location.origin}/forms/${selectedForm.slug}`
+      : selectedForm
+        ? `/forms/${selectedForm.slug}`
+        : "";
+  const filteredFieldTypes = useMemo(() => {
+    const query = fieldTypeSearch.trim().toLowerCase();
+
+    return fieldTypeDefinitions.filter((definition) => {
+      if (!query) {
+        return true;
+      }
+
+      return [definition.label, definition.description, definition.category]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [fieldTypeSearch]);
+  const groupedFieldTypes = useMemo(() => {
+    return filteredFieldTypes.reduce<Record<string, typeof fieldTypeDefinitions>>((groups, definition) => {
+      const current = groups[definition.category] ?? [];
+      groups[definition.category] = [...current, definition];
+      return groups;
+    }, {});
+  }, [filteredFieldTypes]);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+    <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
       <section className="space-y-6">
         <div className={panelClassName}>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
@@ -329,6 +346,62 @@ export function FormsWorkspace({
               className={fieldClassName}
               placeholder="Audience"
             />
+          </div>
+
+          <div className="mt-6 rounded-[1.5rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,0.98))] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Question types
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Pick a field type like a form builder, then add it to your form.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <input
+                value={fieldTypeSearch}
+                onChange={(event) => setFieldTypeSearch(event.target.value)}
+                className={fieldClassName}
+                placeholder="Find questions, input fields, and layout options..."
+              />
+            </div>
+            <div className="mt-4 grid gap-4">
+              {Object.entries(groupedFieldTypes).map(([category, definitions]) => (
+                <div key={category} className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    {category}
+                  </p>
+                  <div className="grid gap-3">
+                    {definitions.map((definition) => (
+                      <button
+                        key={definition.type}
+                        type="button"
+                        onClick={() =>
+                          syncFields([
+                            ...builderFields,
+                            {
+                              ...createEmptyField(),
+                              type: definition.type,
+                            },
+                          ])
+                        }
+                        className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-orange-300 hover:bg-orange-50"
+                      >
+                        <p className="font-semibold text-slate-950">{definition.label}</p>
+                        <p className="mt-1 text-sm text-slate-600">{definition.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {filteredFieldTypes.length === 0 ? (
+                <div className={emptyStateClassName}>
+                  No question types match your search.
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-6 space-y-4">
@@ -397,9 +470,9 @@ export function FormsWorkspace({
                         }
                         className={fieldClassName}
                       >
-                        {fieldTypeOptions.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
+                        {fieldTypeDefinitions.map((definition) => (
+                          <option key={definition.type} value={definition.type}>
+                            {definition.label}
                           </option>
                         ))}
                       </select>
@@ -421,9 +494,7 @@ export function FormsWorkspace({
                       </label>
                     </div>
 
-                    {field.type === "dropdown" ||
-                    field.type === "multiple_choice" ||
-                    field.type === "checkbox" ? (
+                    {fieldTypeNeedsOptions(field.type) ? (
                       <input
                         value={field.optionsText ?? ""}
                         onChange={(event) =>
@@ -522,6 +593,11 @@ export function FormsWorkspace({
                 <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
                   <p className="font-semibold text-slate-950">Shareable link</p>
                   <p className="mt-2 break-all">{shareUrl}</p>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <a href={shareUrl} target="_blank" rel="noreferrer" className={secondaryButtonClassName}>
+                      Open public form
+                    </a>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -623,14 +699,27 @@ export function FormsWorkspace({
               <p className="mt-2 text-slate-600">{selectedForm?.description}</p>
             </div>
             {selectedForm ? (
-              <Link
-                href={`/forms/${selectedForm.slug}`}
-                className={primaryButtonClassName}
-              >
-                Open public form
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/forms/${selectedForm.slug}`} className={primaryButtonClassName}>
+                  Open public form
+                </Link>
+                <a
+                  href={selectedFormShareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={secondaryButtonClassName}
+                >
+                  Open shareable link
+                </a>
+              </div>
             ) : null}
           </div>
+          {selectedFormShareUrl ? (
+            <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+              <p className="font-semibold text-slate-950">Public form link</p>
+              <p className="mt-2 break-all">{selectedFormShareUrl}</p>
+            </div>
+          ) : null}
           <div className="mt-5 grid gap-3">
             {selectedForm?.fields.map((field) => (
               <div key={field.id} className="rounded-[1.5rem] border border-slate-200 p-4">

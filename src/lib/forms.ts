@@ -3,7 +3,12 @@ export type FormFieldType =
   | "paragraph"
   | "phone"
   | "email"
+  | "number"
+  | "link"
+  | "date"
+  | "time"
   | "dropdown"
+  | "multi_select"
   | "multiple_choice"
   | "checkbox";
 
@@ -20,6 +25,102 @@ export type IntakeFormField = {
   options?: string[];
   condition?: FieldCondition;
 };
+
+export type FieldTypeDefinition = {
+  type: FormFieldType;
+  label: string;
+  description: string;
+  category: "Basic" | "Choice" | "Contact" | "Advanced";
+  needsOptions?: boolean;
+};
+
+export const fieldTypeDefinitions: FieldTypeDefinition[] = [
+  {
+    type: "short_text",
+    label: "Short answer",
+    description: "Single-line text input for names and short replies.",
+    category: "Basic",
+  },
+  {
+    type: "paragraph",
+    label: "Long answer",
+    description: "Multi-line text field for notes and detailed answers.",
+    category: "Basic",
+  },
+  {
+    type: "multiple_choice",
+    label: "Multiple choice",
+    description: "Choose exactly one option from a list.",
+    category: "Choice",
+    needsOptions: true,
+  },
+  {
+    type: "checkbox",
+    label: "Checkboxes",
+    description: "Choose multiple options from a list.",
+    category: "Choice",
+    needsOptions: true,
+  },
+  {
+    type: "dropdown",
+    label: "Dropdown",
+    description: "Compact single-select dropdown list.",
+    category: "Choice",
+    needsOptions: true,
+  },
+  {
+    type: "multi_select",
+    label: "Multi-select",
+    description: "Compact multi-select dropdown list.",
+    category: "Choice",
+    needsOptions: true,
+  },
+  {
+    type: "number",
+    label: "Number",
+    description: "Numeric input for age, weight, fees, or counts.",
+    category: "Advanced",
+  },
+  {
+    type: "email",
+    label: "Email",
+    description: "Email address field with browser validation.",
+    category: "Contact",
+  },
+  {
+    type: "phone",
+    label: "Phone number",
+    description: "Phone field for mobile or WhatsApp contact.",
+    category: "Contact",
+  },
+  {
+    type: "link",
+    label: "Link",
+    description: "Website or profile link.",
+    category: "Advanced",
+  },
+  {
+    type: "date",
+    label: "Date",
+    description: "Calendar date field.",
+    category: "Advanced",
+  },
+  {
+    type: "time",
+    label: "Time",
+    description: "Time picker field.",
+    category: "Advanced",
+  },
+];
+
+export function fieldTypeNeedsOptions(type: FormFieldType) {
+  return (
+    type === "dropdown" ||
+    type === "multi_select" ||
+    type === "multiple_choice" ||
+    type === "checkbox"
+  );
+}
 
 export type IntakeForm = {
   id: string;

@@ -15,6 +15,25 @@ function isFieldVisible(field: IntakeFormField, answers: Record<string, string>)
   return selectedValues.includes(field.condition.equals) || parentAnswer === field.condition.equals;
 }
 
+function isValidAnswer(field: IntakeFormField, value: string) {
+  if (!value.trim()) {
+    return true;
+  }
+
+  switch (field.type) {
+    case "email":
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+    case "phone":
+      return /^[+()\d\s-]{7,}$/.test(value.trim());
+    case "number":
+      return !Number.isNaN(Number(value));
+    case "link":
+      return /^https?:\/\/.+/i.test(value.trim());
+    default:
+      return true;
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -39,6 +58,23 @@ export async function POST(
     return Response.json(
       {
         error: `Missing required fields: ${missingRequired.map((field) => field.label).join(", ")}`,
+      },
+      { status: 400 },
+    );
+  }
+
+  const invalidFields = form.fields.filter((field) => {
+    if (!isFieldVisible(field, answers)) {
+      return false;
+    }
+
+    return !isValidAnswer(field, answers[field.id] ?? "");
+  });
+
+  if (invalidFields.length > 0) {
+    return Response.json(
+      {
+        error: `Please correct these fields: ${invalidFields.map((field) => field.label).join(", ")}`,
       },
       { status: 400 },
     );

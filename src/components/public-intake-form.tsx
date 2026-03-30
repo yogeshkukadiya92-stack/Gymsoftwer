@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { IntakeForm, IntakeFormField } from "@/lib/forms";
+import { fieldClassName, primaryButtonClassName, textareaClassName } from "@/components/filter-toolbar";
 
 type PublicIntakeFormProps = {
   form: IntakeForm;
@@ -45,6 +46,181 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
       : [...currentValues, option];
 
     setAnswer(fieldId, nextValues.join(", "));
+  }
+
+  function renderField(field: IntakeFormField) {
+    switch (field.type) {
+      case "paragraph":
+        return (
+          <textarea
+            className={textareaClassName}
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "dropdown":
+        return (
+          <select
+            className={fieldClassName}
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          >
+            <option value="">Select option</option>
+            {field.options?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      case "multi_select":
+        return (
+          <select
+            multiple
+            className={`${fieldClassName} min-h-36`}
+            required={field.required}
+            value={(answers[field.id] ?? "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean)}
+            onChange={(event) =>
+              setAnswer(
+                field.id,
+                Array.from(event.target.selectedOptions)
+                  .map((option) => option.value)
+                  .join(", "),
+              )
+            }
+          >
+            {field.options?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      case "multiple_choice":
+        return (
+          <div className="grid gap-3">
+            {field.options?.map((option) => (
+              <label
+                key={option}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+              >
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option}
+                  checked={(answers[field.id] ?? "") === option}
+                  onChange={(event) => setAnswer(field.id, event.target.value)}
+                  required={field.required}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+      case "checkbox":
+        return (
+          <div className="grid gap-3">
+            {field.options?.map((option) => {
+              const selectedValues = (answers[field.id] ?? "")
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean);
+
+              return (
+                <label
+                  key={option}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                >
+                  <input
+                    type="checkbox"
+                    value={option}
+                    checked={selectedValues.includes(option)}
+                    onChange={() => toggleCheckboxValue(field.id, option)}
+                  />
+                  <span>{option}</span>
+                </label>
+              );
+            })}
+          </div>
+        );
+      case "email":
+        return (
+          <input
+            className={fieldClassName}
+            type="email"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "number":
+        return (
+          <input
+            className={fieldClassName}
+            type="number"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "link":
+        return (
+          <input
+            className={fieldClassName}
+            type="url"
+            required={field.required}
+            placeholder="https://"
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "date":
+        return (
+          <input
+            className={fieldClassName}
+            type="date"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "time":
+        return (
+          <input
+            className={fieldClassName}
+            type="time"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "phone":
+        return (
+          <input
+            className={fieldClassName}
+            type="tel"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+      case "short_text":
+      default:
+        return (
+          <input
+            className={fieldClassName}
+            type="text"
+            required={field.required}
+            value={answers[field.id] ?? ""}
+            onChange={(event) => setAnswer(field.id, event.target.value)}
+          />
+        );
+    }
   }
 
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
@@ -98,79 +274,12 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
                   <span className="mb-2 block text-sm font-medium text-slate-800">
                     {field.label} {field.required ? "*" : ""}
                   </span>
-                  {field.type === "paragraph" ? (
-                    <textarea
-                      className="min-h-28 w-full rounded-2xl border border-slate-300 px-4 py-3"
-                      required={field.required}
-                      value={answers[field.id] ?? ""}
-                      onChange={(event) => setAnswer(field.id, event.target.value)}
-                    />
-                  ) : field.type === "dropdown" ? (
-                    <select
-                      className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                      required={field.required}
-                      value={answers[field.id] ?? ""}
-                      onChange={(event) => setAnswer(field.id, event.target.value)}
-                    >
-                      <option value="">Select option</option>
-                      {field.options?.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  ) : field.type === "multiple_choice" ? (
-                    <div className="grid gap-3">
-                      {field.options?.map((option) => (
-                        <label
-                          key={option}
-                          className="flex items-center gap-3 rounded-2xl border border-slate-300 px-4 py-3"
-                        >
-                          <input
-                            type="radio"
-                            name={field.id}
-                            value={option}
-                            checked={(answers[field.id] ?? "") === option}
-                            onChange={(event) => setAnswer(field.id, event.target.value)}
-                            required={field.required}
-                          />
-                          <span>{option}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : field.type === "checkbox" ? (
-                    <div className="grid gap-3">
-                      {field.options?.map((option) => {
-                        const selectedValues = (answers[field.id] ?? "")
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean);
-
-                        return (
-                          <label
-                            key={option}
-                            className="flex items-center gap-3 rounded-2xl border border-slate-300 px-4 py-3"
-                          >
-                            <input
-                              type="checkbox"
-                              value={option}
-                              checked={selectedValues.includes(option)}
-                              onChange={() => toggleCheckboxValue(field.id, option)}
-                            />
-                            <span>{option}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <input
-                      className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                      type={field.type === "email" ? "email" : "text"}
-                      required={field.required}
-                      value={answers[field.id] ?? ""}
-                      onChange={(event) => setAnswer(field.id, event.target.value)}
-                    />
-                  )}
+                  {renderField(field)}
+                  {field.type === "multi_select" ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Hold Ctrl or Cmd to select multiple options.
+                    </p>
+                  ) : null}
                 </label>
               ))}
             {submitError ? (
@@ -181,7 +290,7 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-orange-500 px-6 py-3 font-semibold text-slate-950"
+              className={primaryButtonClassName}
             >
               {isSubmitting ? "Submitting..." : "Submit form"}
             </button>
