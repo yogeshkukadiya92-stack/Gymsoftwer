@@ -12,6 +12,7 @@ type PublicIntakeFormProps = {
 
 export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [fileAnswers, setFileAnswers] = useState<Record<string, File | null>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -199,6 +200,58 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
             onChange={(event) => setAnswer(field.id, event.target.value)}
           />
         );
+      case "linear_scale": {
+        const min = field.scaleMin ?? 1;
+        const max = field.scaleMax ?? 5;
+        const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+
+        return (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {values.map((value) => (
+                <label
+                  key={value}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                >
+                  <input
+                    type="radio"
+                    name={field.id}
+                    value={String(value)}
+                    checked={(answers[field.id] ?? "") === String(value)}
+                    onChange={(event) => setAnswer(field.id, event.target.value)}
+                    required={field.required}
+                  />
+                  <span>{value}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+              <span>{field.scaleLowLabel || "Low"}</span>
+              <span>{field.scaleHighLabel || "High"}</span>
+            </div>
+          </div>
+        );
+      }
+      case "file_upload":
+        return (
+          <div className="space-y-3">
+            <input
+              className={fieldClassName}
+              type="file"
+              onChange={(event) =>
+                setFileAnswers((current) => ({
+                  ...current,
+                  [field.id]: event.target.files?.[0] ?? null,
+                }))
+              }
+            />
+            {fileAnswers[field.id] ? (
+              <p className="text-sm text-slate-600">
+                Selected file: {fileAnswers[field.id]?.name}
+              </p>
+            ) : null}
+          </div>
+        );
       case "phone":
         return (
           <input
@@ -228,12 +281,55 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
     setIsSubmitting(true);
     setSubmitError("");
 
+    const nextAnswers = { ...answers };
+
+    try {
+      const visibleFileFields = form.fields.filter(
+        (field) => field.type === "file_upload" && isFieldVisible(field),
+      );
+
+      for (const field of visibleFileFields) {
+        const file = fileAnswers[field.id];
+
+        if (!file) {
+          continue;
+        }
+
+        const uploadData = new FormData();
+        uploadData.append("fieldId", field.id);
+        uploadData.append("file", file);
+
+        const uploadResponse = await fetch(`/api/forms/${form.slug}/upload`, {
+          method: "POST",
+          body: uploadData,
+        });
+
+        const uploadPayload = (await uploadResponse.json()) as {
+          error?: string;
+          fileUrl?: string;
+          fileName?: string;
+        };
+
+        if (!uploadResponse.ok || !uploadPayload.fileUrl) {
+          setSubmitError(uploadPayload.error ?? `Upload failed for ${field.label}.`);
+          setIsSubmitting(false);
+          return;
+        }
+
+        nextAnswers[field.id] = uploadPayload.fileUrl;
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "File upload failed.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const response = await fetch(`/api/forms/${form.slug}/responses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify({ answers: nextAnswers }),
     });
 
     const payload = (await response.json()) as { error?: string };

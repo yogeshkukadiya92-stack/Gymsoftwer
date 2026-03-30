@@ -61,6 +61,10 @@ function createEmptyField(): BuilderField {
     optionsText: "",
     conditionFieldId: "",
     conditionEquals: "",
+    scaleMin: 1,
+    scaleMax: 5,
+    scaleLowLabel: "Low",
+    scaleHighLabel: "High",
   };
 }
 
@@ -70,6 +74,10 @@ function toBuilderField(field: IntakeFormField): BuilderField {
     optionsText: field.options?.join(", ") ?? "",
     conditionFieldId: field.condition?.fieldId ?? "",
     conditionEquals: field.condition?.equals ?? "",
+    scaleMin: field.scaleMin ?? 1,
+    scaleMax: field.scaleMax ?? 5,
+    scaleLowLabel: field.scaleLowLabel ?? "Low",
+    scaleHighLabel: field.scaleHighLabel ?? "High",
   };
 }
 
@@ -96,6 +104,17 @@ function toFormField(field: BuilderField): IntakeFormField {
           .filter(Boolean)
       : undefined,
     condition,
+    scaleMin:
+      field.type === "linear_scale"
+        ? Math.min(field.scaleMin ?? 1, field.scaleMax ?? 5)
+        : undefined,
+    scaleMax:
+      field.type === "linear_scale"
+        ? Math.max(field.scaleMin ?? 1, field.scaleMax ?? 5)
+        : undefined,
+    scaleLowLabel: field.type === "linear_scale" ? (field.scaleLowLabel ?? "Low") : undefined,
+    scaleHighLabel:
+      field.type === "linear_scale" ? (field.scaleHighLabel ?? "High") : undefined,
   };
 }
 
@@ -511,6 +530,69 @@ export function FormsWorkspace({
                       />
                     ) : null}
 
+                    {field.type === "linear_scale" ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input
+                          type="number"
+                          value={field.scaleMin ?? 1}
+                          onChange={(event) =>
+                            syncFields(
+                              builderFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, scaleMin: Number(event.target.value || 1) }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className={fieldClassName}
+                          placeholder="Scale minimum"
+                        />
+                        <input
+                          type="number"
+                          value={field.scaleMax ?? 5}
+                          onChange={(event) =>
+                            syncFields(
+                              builderFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, scaleMax: Number(event.target.value || 5) }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className={fieldClassName}
+                          placeholder="Scale maximum"
+                        />
+                        <input
+                          value={field.scaleLowLabel ?? ""}
+                          onChange={(event) =>
+                            syncFields(
+                              builderFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, scaleLowLabel: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className={fieldClassName}
+                          placeholder="Low label"
+                        />
+                        <input
+                          value={field.scaleHighLabel ?? ""}
+                          onChange={(event) =>
+                            syncFields(
+                              builderFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, scaleHighLabel: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className={fieldClassName}
+                          placeholder="High label"
+                        />
+                      </div>
+                    ) : null}
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <select
                         value={field.conditionFieldId ?? ""}
@@ -733,6 +815,18 @@ export function FormsWorkspace({
                 {field.options?.length ? (
                   <p className="mt-2 text-sm text-orange-700">
                     Options: {field.options.join(", ")}
+                  </p>
+                ) : null}
+                {field.type === "linear_scale" ? (
+                  <p className="mt-2 text-sm text-sky-700">
+                    Scale: {field.scaleMin ?? 1} to {field.scaleMax ?? 5}
+                    {" · "}
+                    {field.scaleLowLabel || "Low"} to {field.scaleHighLabel || "High"}
+                  </p>
+                ) : null}
+                {field.type === "file_upload" ? (
+                  <p className="mt-2 text-sm text-sky-700">
+                    Public responders can upload one file for this question.
                   </p>
                 ) : null}
                 {field.condition ? (

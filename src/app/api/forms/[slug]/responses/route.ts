@@ -29,6 +29,14 @@ function isValidAnswer(field: IntakeFormField, value: string) {
       return !Number.isNaN(Number(value));
     case "link":
       return /^https?:\/\/.+/i.test(value.trim());
+    case "linear_scale": {
+      const numericValue = Number(value);
+      const min = field.scaleMin ?? 1;
+      const max = field.scaleMax ?? 5;
+      return !Number.isNaN(numericValue) && numericValue >= min && numericValue <= max;
+    }
+    case "file_upload":
+      return value.startsWith("/") || /^https?:\/\/.+/i.test(value.trim());
     default:
       return true;
   }

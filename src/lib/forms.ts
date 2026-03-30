@@ -5,12 +5,14 @@ export type FormFieldType =
   | "email"
   | "number"
   | "link"
+  | "file_upload"
   | "date"
   | "time"
   | "dropdown"
   | "multi_select"
   | "multiple_choice"
-  | "checkbox";
+  | "checkbox"
+  | "linear_scale";
 
 export type FieldCondition = {
   fieldId: string;
@@ -24,6 +26,10 @@ export type IntakeFormField = {
   required: boolean;
   options?: string[];
   condition?: FieldCondition;
+  scaleMin?: number;
+  scaleMax?: number;
+  scaleLowLabel?: string;
+  scaleHighLabel?: string;
 };
 
 export type FieldTypeDefinition = {
@@ -100,6 +106,12 @@ export const fieldTypeDefinitions: FieldTypeDefinition[] = [
     category: "Advanced",
   },
   {
+    type: "file_upload",
+    label: "File upload",
+    description: "Upload a document, image, or attachment.",
+    category: "Advanced",
+  },
+  {
     type: "date",
     label: "Date",
     description: "Calendar date field.",
@@ -109,6 +121,12 @@ export const fieldTypeDefinitions: FieldTypeDefinition[] = [
     type: "time",
     label: "Time",
     description: "Time picker field.",
+    category: "Advanced",
+  },
+  {
+    type: "linear_scale",
+    label: "Linear scale",
+    description: "Numeric rating scale such as 1 to 5 or 1 to 10.",
     category: "Advanced",
   },
 ];
