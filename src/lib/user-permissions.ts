@@ -5,6 +5,13 @@ type PermissionOption = {
   label: string;
 };
 
+export type PermissionPreset = {
+  id: string;
+  label: string;
+  role: UserRole;
+  allowedRoutes: string[];
+};
+
 export const memberPortalRoutes: PermissionOption[] = [
   { href: "/member", label: "Overview" },
   { href: "/member/workouts", label: "Workouts" },
@@ -39,6 +46,53 @@ export const adminPortalRoutes: PermissionOption[] = [
   { href: "/admin/reminders", label: "Reminders" },
   { href: "/admin/integrations", label: "Integrations" },
   { href: "/admin/data-tools", label: "Data tools" },
+];
+
+export const permissionPresets: PermissionPreset[] = [
+  {
+    id: "member-basic",
+    label: "Basic member",
+    role: "member",
+    allowedRoutes: ["/member", "/member/schedule", "/member/profile"],
+  },
+  {
+    id: "member-premium",
+    label: "Premium member",
+    role: "member",
+    allowedRoutes: ["/member", "/member/workouts", "/member/progress", "/member/schedule", "/member/profile"],
+  },
+  {
+    id: "trainer-limited",
+    label: "Trainer limited",
+    role: "trainer",
+    allowedRoutes: ["/trainer", "/trainer/schedule"],
+  },
+  {
+    id: "trainer-full",
+    label: "Trainer full",
+    role: "trainer",
+    allowedRoutes: ["/trainer", "/trainer/clients", "/trainer/schedule"],
+  },
+  {
+    id: "admin-billing",
+    label: "Admin billing only",
+    role: "admin",
+    allowedRoutes: ["/admin", "/admin/billing", "/admin/reports"],
+  },
+  {
+    id: "admin-operations",
+    label: "Admin operations",
+    role: "admin",
+    allowedRoutes: [
+      "/admin",
+      "/admin/users",
+      "/admin/user-permissions",
+      "/admin/memberships",
+      "/admin/attendance",
+      "/admin/schedule",
+      "/admin/reports",
+    ],
+  },
 ];
 
 export function getPermissionOptionsForRole(role: UserRole): PermissionOption[] {

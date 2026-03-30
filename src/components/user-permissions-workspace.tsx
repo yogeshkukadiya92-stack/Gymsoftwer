@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { getPermissionOptionsForRole } from "@/lib/user-permissions";
+import { getPermissionOptionsForRole, permissionPresets } from "@/lib/user-permissions";
 import { Profile, UserPermission } from "@/lib/types";
 
 type UserPermissionsWorkspaceProps = {
@@ -22,6 +22,9 @@ export function UserPermissionsWorkspace({
 
   const selectedUser = managedUsers.find((user) => user.id === selectedUserId) ?? managedUsers[0];
   const options = selectedUser ? getPermissionOptionsForRole(selectedUser.role) : [];
+  const rolePresets = selectedUser
+    ? permissionPresets.filter((preset) => preset.role === selectedUser.role)
+    : [];
   const selectedPermission = permissions.find((item) => item.userId === selectedUser?.id);
   const allowedRoutes = selectedPermission?.allowedRoutes ?? options.map((item) => item.href);
 
@@ -45,6 +48,27 @@ export function UserPermissionsWorkspace({
         ? current.map((item) => (item.userId === selectedUser.id ? nextPermission : item))
         : [nextPermission, ...current];
     });
+  }
+
+  function applyPreset(allowedPresetRoutes: string[]) {
+    if (!selectedUser) {
+      return;
+    }
+
+    setPermissions((current) => {
+      const nextPermission = {
+        userId: selectedUser.id,
+        allowedRoutes: allowedPresetRoutes,
+      };
+
+      const existing = current.find((item) => item.userId === selectedUser.id);
+
+      return existing
+        ? current.map((item) => (item.userId === selectedUser.id ? nextPermission : item))
+        : [nextPermission, ...current];
+    });
+
+    setStatusMessage("Preset applied. Click save permissions to confirm.");
   }
 
   async function savePermissions() {
@@ -129,6 +153,25 @@ export function UserPermissionsWorkspace({
             </div>
 
             <div className="mt-6 grid gap-3">
+              {rolePresets.length > 0 ? (
+                <div className="mb-2 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-600">
+                    Quick presets
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {rolePresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyPreset(preset.allowedRoutes)}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {options.map((option) => {
                 const checked = allowedRoutes.includes(option.href);
 
