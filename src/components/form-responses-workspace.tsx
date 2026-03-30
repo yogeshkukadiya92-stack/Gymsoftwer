@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import {
+  emptyStateClassName,
   fieldClassName,
   FilterToolbar,
   FilterToolbarAction,
@@ -334,7 +335,7 @@ export function FormResponsesWorkspace({
                 </tbody>
               </table>
             ) : (
-              <div className="px-6 py-10 text-slate-600">
+              <div className={`m-6 ${emptyStateClassName}`}>
                 No responses are available for this form yet. Select another form or collect data through the public form link.
               </div>
             )}

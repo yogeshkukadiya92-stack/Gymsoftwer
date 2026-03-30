@@ -34,6 +34,17 @@ export const accentButtonClassName =
 export const dangerButtonClassName =
   "inline-flex items-center justify-center rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60";
 
+export const emptyStateClassName =
+  "rounded-[1.5rem] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.94),rgba(255,255,255,0.98))] p-5 text-sm leading-6 text-slate-500";
+
+export const mutedStatusTextClassName = "text-sm text-slate-500";
+
+export const successMessageClassName =
+  "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700";
+
+export const errorMessageClassName =
+  "rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700";
+
 export const tableShellClassName =
   "overflow-hidden rounded-[2rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] shadow-[0_24px_80px_rgba(7,24,39,0.08)]";
 

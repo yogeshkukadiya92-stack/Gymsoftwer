@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 
 import {
+  emptyStateClassName,
   dangerButtonClassName,
   fieldClassName,
+  mutedStatusTextClassName,
   panelClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
@@ -444,7 +446,7 @@ export function UserManagementWorkspace({
             />
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-500">{statusMessage}</p>
+            <p className={mutedStatusTextClassName}>{statusMessage}</p>
             <button
               type="submit"
               disabled={isSubmitting}
@@ -532,7 +534,7 @@ export function UserManagementWorkspace({
                 </p>
                 {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel ? (
                   <div className="mt-2">
-                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                    <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
                       {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel}
                     </span>
                   </div>
@@ -543,7 +545,7 @@ export function UserManagementWorkspace({
 
                     if (!status?.loginReady) {
                       return (
-                        <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
                           Login not ready
                         </span>
                       );
@@ -551,14 +553,14 @@ export function UserManagementWorkspace({
 
                     if (status.mustResetPassword) {
                       return (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
                           Must reset password
                         </span>
                       );
                     }
 
                     return (
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
                         Login ready
                       </span>
                     );
@@ -590,7 +592,7 @@ export function UserManagementWorkspace({
               </button>
             ))}
           {filteredUsers.length === 0 ? (
-            <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+            <div className={emptyStateClassName}>
               No users match the current search or filters.
             </div>
           ) : null}
@@ -606,20 +608,20 @@ export function UserManagementWorkspace({
                 <p className="mt-1 text-sm text-slate-600">{selectedUser.email}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {!selectedUserLoginStatus?.loginReady ? (
-                    <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
                       Login not ready
                     </span>
                   ) : selectedUserLoginStatus.mustResetPassword ? (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
                       First login password reset pending
                     </span>
                   ) : (
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
                       User can sign in now
                     </span>
                   )}
                   {selectedUser.phone ? (
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
                       Phone login enabled
                     </span>
                   ) : null}

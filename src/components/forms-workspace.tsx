@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 
 import {
   accentButtonClassName,
+  emptyStateClassName,
+  errorMessageClassName,
   fieldClassName,
   FilterToolbar,
   FilterToolbarAction,
@@ -14,6 +16,7 @@ import {
   panelClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
+  successMessageClassName,
   textareaClassName,
 } from "@/components/filter-toolbar";
 import {
@@ -510,10 +513,10 @@ export function FormsWorkspace({
           {createResult ? (
             <div className="mt-5 rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,0.96))] p-4">
               {createResult.error ? (
-                <p className="font-medium text-rose-700">{createResult.error}</p>
+                <p className={errorMessageClassName}>{createResult.error}</p>
               ) : null}
               {createResult.message ? (
-                <p className="font-medium text-emerald-700">{createResult.message}</p>
+                <p className={successMessageClassName}>{createResult.message}</p>
               ) : null}
               {shareUrl ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
@@ -601,7 +604,7 @@ export function FormsWorkspace({
               </button>
             ))}
             {filteredForms.length === 0 ? (
-              <div className="rounded-[1.5rem] border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+              <div className={emptyStateClassName}>
                 No forms match the current filters.
               </div>
             ) : null}
