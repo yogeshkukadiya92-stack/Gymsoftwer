@@ -14,16 +14,16 @@ type AppShellNavProps = {
   navLinks: NavLink[];
 };
 
-function isActiveLink(pathname: string, href: string) {
+function getMatchScore(pathname: string, href: string) {
   if (href === pathname) {
-    return true;
+    return href.length + 1000;
   }
 
   if (href !== "/" && pathname.startsWith(`${href}/`)) {
-    return true;
+    return href.length;
   }
 
-  return false;
+  return -1;
 }
 
 export function AppShellNav({ navLinks }: AppShellNavProps) {
@@ -49,13 +49,23 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
     [] as Array<{ category: string; links: NavLink[] }>,
   );
 
-  const categoryForPath = useMemo(
-    () =>
-      groupedLinks.find((group) =>
-        group.links.some((link) => isActiveLink(pathname, link.href)),
-      )?.category ?? "Dashboard",
-    [groupedLinks, pathname],
-  );
+  const categoryForPath = useMemo(() => {
+    let bestCategory = groupedLinks[0]?.category ?? "Dashboard";
+    let bestScore = -1;
+
+    for (const group of groupedLinks) {
+      for (const link of group.links) {
+        const score = getMatchScore(pathname, link.href);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestCategory = group.category;
+        }
+      }
+    }
+
+    return bestCategory;
+  }, [groupedLinks, pathname]);
   const [selectedCategory, setSelectedCategory] = useState(categoryForPath);
 
   useEffect(() => {
@@ -66,7 +76,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
     return (
       <div className="flex flex-wrap gap-3 text-sm">
         {navLinks.map((link) => {
-          const active = isActiveLink(pathname, link.href);
+          const active = getMatchScore(pathname, link.href) >= 0;
 
           return (
             <Link
@@ -116,7 +126,7 @@ export function AppShellNav({ navLinks }: AppShellNavProps) {
       <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-3 backdrop-blur">
         <div className="flex flex-wrap gap-2">
           {visibleGroup.links.map((link) => {
-            const active = isActiveLink(pathname, link.href);
+            const active = getMatchScore(pathname, link.href) >= 0;
 
             return (
               <Link
