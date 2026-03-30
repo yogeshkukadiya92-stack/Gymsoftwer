@@ -4,6 +4,7 @@ import {
   requireRole,
   updateManagedUser,
 } from "@/lib/auth";
+import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { getAppData } from "@/lib/data";
 
 export async function GET() {
@@ -28,9 +29,9 @@ export async function POST(request: Request) {
     branch?: string;
   };
 
-  if (!body.fullName?.trim() || !body.email?.trim() || !body.password?.trim() || !body.role) {
+  if (!body.fullName?.trim() || !body.email?.trim() || !body.role) {
     return Response.json(
-      { error: "Full name, email, password, and role are required." },
+      { error: "Full name, email, and role are required." },
       { status: 400 },
     );
   }
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     const user = await createManagedUser({
       fullName: body.fullName.trim(),
       email: body.email.trim(),
-      password: body.password,
+      password: body.password?.trim() || DEFAULT_FIRST_LOGIN_PASSWORD,
       role: body.role,
       phone: body.phone?.trim(),
       fitnessGoal: body.fitnessGoal?.trim(),
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     });
 
     return Response.json({
-      message: "User created successfully.",
+      message: `User created successfully. Default password: ${DEFAULT_FIRST_LOGIN_PASSWORD}`,
       user,
     });
   } catch (error) {

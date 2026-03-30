@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { hasSupabaseEnv } from "@/lib/env";
+import { DEFAULT_FIRST_LOGIN_PASSWORD, normalizePhoneForLogin } from "@/lib/account-policy";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Profile, UserRole } from "@/lib/types";
@@ -114,7 +115,7 @@ export async function signOutCurrentSession() {
 export async function createManagedUser(input: {
   fullName: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   phone?: string;
   fitnessGoal?: string;
@@ -126,10 +127,14 @@ export async function createManagedUser(input: {
     throw new Error("Supabase service role key is required for user management.");
   }
 
+  const nextPassword = input.password?.trim() || DEFAULT_FIRST_LOGIN_PASSWORD;
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
     email: input.email,
-    password: input.password,
+    password: nextPassword,
     email_confirm: true,
+    user_metadata: {
+      must_reset_password: true,
+    },
   });
 
   if (authError || !authUser.user) {
@@ -197,6 +202,31 @@ async function findProfileByEmail(email: string) {
   return data;
 }
 
+export async function findProfileByLoginIdentifier(identifier: string) {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user lookup.");
+  }
+
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+  const normalizedPhone = normalizePhoneForLogin(identifier);
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, phone, role");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).find((profile) => {
+    const email = String(profile.email ?? "").trim().toLowerCase();
+    const phone = normalizePhoneForLogin(String(profile.phone ?? ""));
+
+    return email === normalizedIdentifier || (!!normalizedPhone && phone === normalizedPhone);
+  });
+}
+
 export async function updateManagedUser(input: {
   id: string;
   currentEmail: string;
@@ -215,11 +245,18 @@ export async function updateManagedUser(input: {
   }
 
   const authUser = await findAuthUserByEmail(input.currentEmail);
+  const shouldResetPassword = Boolean(input.password?.trim());
 
   if (authUser) {
     const { error: authError } = await supabase.auth.admin.updateUserById(authUser.id, {
       email: input.email,
       password: input.password?.trim() ? input.password : undefined,
+      user_metadata: shouldResetPassword
+        ? {
+            ...(authUser.user_metadata ?? {}),
+            must_reset_password: true,
+          }
+        : undefined,
     });
 
     if (authError) {
@@ -284,10 +321,6 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
     const lookupEmail = row.currentEmail || row.email;
     const existingAuthUser = lookupEmail ? await findAuthUserByEmail(lookupEmail) : null;
     const existingProfile = lookupEmail ? await findProfileByEmail(lookupEmail) : null;
-
-    if (!existingAuthUser && !row.password.trim()) {
-      throw new Error(`Password is required for new user ${row.email}.`);
-    }
 
     if (row.id || existingAuthUser || row.currentEmail.trim() || existingProfile?.id) {
       const user = await updateManagedUser({

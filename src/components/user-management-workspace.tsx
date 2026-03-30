@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { getUserBranchHistory } from "@/lib/branch-utils";
 import { AppData, Profile } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export function UserManagementWorkspace({
     currentEmail: "",
     fullName: "",
     email: "",
-    password: "",
+    password: DEFAULT_FIRST_LOGIN_PASSWORD,
     role: "member" as "member" | "trainer" | "admin",
     phone: "",
     fitnessGoal: "",
@@ -61,7 +62,7 @@ export function UserManagementWorkspace({
       currentEmail: "",
       fullName: "",
       email: "",
-      password: "",
+      password: DEFAULT_FIRST_LOGIN_PASSWORD,
       role: "member",
       phone: "",
       fitnessGoal: "",
@@ -283,6 +284,12 @@ export function UserManagementWorkspace({
             ) : null}
           </div>
           <div className="mt-4 grid gap-4">
+            {!editingUserId ? (
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                New users can sign in with their email or phone number. Their default password is{" "}
+                <span className="font-semibold">{DEFAULT_FIRST_LOGIN_PASSWORD}</span>, and they will be asked to set a new password after first login.
+              </div>
+            ) : null}
             <input
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
               placeholder="Full name"
@@ -302,7 +309,7 @@ export function UserManagementWorkspace({
             />
             <input
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-              placeholder="Temporary password"
+              placeholder={editingUserId ? "Leave blank to keep current password" : "Default password"}
               type="password"
               value={formState.password}
               onChange={(event) =>
@@ -379,8 +386,8 @@ export function UserManagementWorkspace({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-950">{user.fullName}</p>
-                    <p className="text-sm text-slate-600">{user.email}</p>
+                <p className="font-semibold text-slate-950">{user.fullName}</p>
+                <p className="text-sm text-slate-600">{user.email}</p>
                   </div>
                   <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
                     {user.role}

@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 
+import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { LeadRecord, LeadSource, LeadStatus } from "@/lib/business-data";
 import {
   AppData,
@@ -332,12 +333,12 @@ export function buildUsersWorkbook(profiles: Profile[]) {
   const workbook = XLSX.utils.book_new();
 
   const userRows = profiles.map((profile) => ({
-    id: profile.id,
-    current_email: profile.email,
-    full_name: profile.fullName,
-    email: profile.email,
-    password: "",
-    role: profile.role,
+        id: profile.id,
+        current_email: profile.email,
+        full_name: profile.fullName,
+        email: profile.email,
+        password: DEFAULT_FIRST_LOGIN_PASSWORD,
+        role: profile.role,
     phone: profile.phone,
     fitness_goal: profile.fitnessGoal,
     branch: profile.branch,
@@ -360,7 +361,7 @@ export function buildUsersTemplateWorkbook() {
         current_email: "",
         full_name: "Admin User",
         email: "admin@example.com",
-        password: "TempPass123.",
+        password: DEFAULT_FIRST_LOGIN_PASSWORD,
         role: "admin",
         phone: "+91 98765 00000",
         fitness_goal: "Operations oversight",
@@ -372,7 +373,7 @@ export function buildUsersTemplateWorkbook() {
         current_email: "",
         full_name: "Trainer User",
         email: "trainer@example.com",
-        password: "TrainerPass123.",
+        password: DEFAULT_FIRST_LOGIN_PASSWORD,
         role: "trainer",
         phone: "+91 98765 11111",
         fitness_goal: "Coach performance",
@@ -384,7 +385,7 @@ export function buildUsersTemplateWorkbook() {
         current_email: "",
         full_name: "Member User",
         email: "member@example.com",
-        password: "MemberPass123.",
+        password: DEFAULT_FIRST_LOGIN_PASSWORD,
         role: "member",
         phone: "+91 98765 22222",
         fitness_goal: "Weight loss",

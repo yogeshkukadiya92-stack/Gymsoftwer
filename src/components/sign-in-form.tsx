@@ -6,7 +6,7 @@ import { useState } from "react";
 
 export function SignInForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +21,7 @@ export function SignInForm() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
 
     const payload = (await response.json()) as { error?: string; redirectTo?: string };
@@ -43,17 +43,17 @@ export function SignInForm() {
       </p>
       <h1 className="mt-4 font-serif text-4xl">Sign in to admin panel</h1>
       <p className="mt-4 text-slate-300">
-        Sign in with your GymFlow account to access the correct role-based dashboard.
+        Sign in with your GymFlow account using your email address or phone number.
       </p>
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         <label className="block">
-          <span className="mb-2 block text-sm text-slate-200">Email</span>
+          <span className="mb-2 block text-sm text-slate-200">Email or phone</span>
           <input
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500"
-            placeholder="admin@example.com"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            placeholder="admin@example.com or +91 98765 00000"
+            type="text"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
             required
           />
         </label>
@@ -83,6 +83,7 @@ export function SignInForm() {
       </form>
       <div className="mt-8 grid gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
         <p className="font-semibold text-white">Quick access</p>
+        <p>Admin-created accounts use the default password <span className="font-semibold text-orange-200">123456</span> on first login.</p>
         <div className="flex flex-wrap gap-3">
           <Link href="/member" className="rounded-full border border-white/10 px-4 py-2">
             Member dashboard

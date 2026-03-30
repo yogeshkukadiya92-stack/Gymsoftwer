@@ -1,23 +1,25 @@
 import { cookies } from "next/headers";
 
-import { adminSessionCookie, isValidAdminLogin } from "@/lib/auth";
+import { adminSessionCookie, findProfileByLoginIdentifier, isValidAdminLogin } from "@/lib/auth";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
+    identifier?: string;
     email?: string;
     password?: string;
   };
+  const identifier = body.identifier?.trim() || body.email?.trim() || "";
 
-  if (!body.email || !body.password) {
+  if (!identifier || !body.password) {
     return Response.json(
-      { error: "Email and password are required." },
+      { error: "Email or phone and password are required." },
       { status: 400 },
     );
   }
 
-  if (isValidAdminLogin(body.email, body.password)) {
+  if (isValidAdminLogin(identifier, body.password)) {
     const cookieStore = await cookies();
     cookieStore.set(adminSessionCookie, "authenticated", {
       httpOnly: true,
@@ -40,8 +42,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Supabase client unavailable." }, { status: 500 });
     }
 
+    const matchedProfile = await findProfileByLoginIdentifier(identifier).catch(() => null);
+    const loginEmail = matchedProfile?.email ?? identifier;
+
     const { error } = await supabase.auth.signInWithPassword({
-      email: body.email,
+      email: loginEmail,
       password: body.password,
     });
 
@@ -55,11 +60,12 @@ export async function POST(request: Request) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("*")
       .eq("email", user?.email ?? "")
       .single();
 
-    const redirectTo =
+    const mustResetPassword = Boolean(user?.user_metadata?.must_reset_password);
+    const roleRedirect =
       profile?.role === "admin"
         ? "/admin"
         : profile?.role === "trainer"
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       message: "Login successful.",
-      redirectTo,
+      redirectTo: mustResetPassword ? "/reset-password" : roleRedirect,
     });
   }
 
