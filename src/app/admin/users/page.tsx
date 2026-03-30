@@ -2,10 +2,12 @@ import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { UserManagementWorkspace } from "@/components/user-management-workspace";
 import { adminNavLinks } from "@/lib/admin-nav";
+import { getManagedUserLoginStatuses } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
 
 export default async function AdminUsersPage() {
   const data = await getAppData();
+  const loginStatuses = await getManagedUserLoginStatuses(data.profiles);
 
   return (
     <AppShell
@@ -17,6 +19,7 @@ export default async function AdminUsersPage() {
       <SectionCard eyebrow="Accounts" title="Roles and access">
         <UserManagementWorkspace
           initialUsers={data.profiles}
+          initialLoginStatuses={loginStatuses}
           gymBranches={data.gymBranches}
           branchVisits={data.branchVisits}
           sessions={data.sessions}

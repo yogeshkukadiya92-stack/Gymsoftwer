@@ -10,6 +10,12 @@ import type { ImportedUserRow } from "@/lib/excel";
 
 export const adminSessionCookie = "gymflow_admin_session";
 
+export type ManagedUserLoginStatus = {
+  userId: string;
+  loginReady: boolean;
+  mustResetPassword: boolean;
+};
+
 export function getConfiguredAdminCredentials() {
   return {
     email: process.env.ADMIN_EMAIL ?? "",
@@ -180,6 +186,22 @@ async function findAuthUserByEmail(email: string) {
   return data.users.find(
     (user) => user.email?.trim().toLowerCase() === email.trim().toLowerCase(),
   );
+}
+
+async function listAuthUsers() {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const { data, error } = await supabase.auth.admin.listUsers();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.users;
 }
 
 async function findProfileByEmail(email: string) {
@@ -354,4 +376,28 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
     imported,
     updated,
   };
+}
+
+export async function getManagedUserLoginStatuses(profiles: Profile[]): Promise<ManagedUserLoginStatus[]> {
+  if (!hasSupabaseEnv) {
+    return profiles.map((profile) => ({
+      userId: profile.id,
+      loginReady: true,
+      mustResetPassword: false,
+    }));
+  }
+
+  const authUsers = await listAuthUsers();
+
+  return profiles.map((profile) => {
+    const authUser = authUsers.find(
+      (user) => user.email?.trim().toLowerCase() === profile.email.trim().toLowerCase(),
+    );
+
+    return {
+      userId: profile.id,
+      loginReady: Boolean(authUser),
+      mustResetPassword: Boolean(authUser?.user_metadata?.must_reset_password),
+    };
+  });
 }

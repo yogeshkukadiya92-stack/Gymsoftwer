@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 
 import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { getUserBranchHistory } from "@/lib/branch-utils";
+import { ManagedUserLoginStatus } from "@/lib/auth";
 import { AppData, Profile } from "@/lib/types";
 
 type UserManagementWorkspaceProps = {
   initialUsers: Profile[];
+  initialLoginStatuses: ManagedUserLoginStatus[];
   gymBranches: AppData["gymBranches"];
   branchVisits: AppData["branchVisits"];
   sessions: AppData["sessions"];
@@ -16,12 +18,14 @@ type UserManagementWorkspaceProps = {
 
 export function UserManagementWorkspace({
   initialUsers,
+  initialLoginStatuses,
   gymBranches,
   branchVisits,
   sessions,
   memberships,
 }: UserManagementWorkspaceProps) {
   const [users, setUsers] = useState(initialUsers);
+  const [loginStatuses, setLoginStatuses] = useState(initialLoginStatuses);
   const [selectedUserId, setSelectedUserId] = useState(initialUsers[0]?.id ?? "");
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formState, setFormState] = useState({
@@ -41,6 +45,8 @@ export function UserManagementWorkspace({
   const [isImporting, setIsImporting] = useState(false);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
+  const selectedUserLoginStatus =
+    loginStatuses.find((status) => status.userId === selectedUser?.id) ?? null;
   const selectedUserBranchHistory = useMemo(() => {
     if (!selectedUser) {
       return null;
@@ -72,7 +78,11 @@ export function UserManagementWorkspace({
 
   async function refreshUsers() {
     const response = await fetch("/api/admin/users");
-    const payload = (await response.json()) as { users?: Profile[]; error?: string };
+    const payload = (await response.json()) as {
+      users?: Profile[];
+      loginStatuses?: ManagedUserLoginStatus[];
+      error?: string;
+    };
 
     if (!response.ok || !payload.users) {
       setStatusMessage(payload.error ?? "Users refresh failed.");
@@ -80,6 +90,7 @@ export function UserManagementWorkspace({
     }
 
     setUsers(payload.users);
+    setLoginStatuses(payload.loginStatuses ?? []);
     if (!selectedUserId && payload.users.length > 0) {
       setSelectedUserId(payload.users[0].id);
     }
@@ -386,8 +397,8 @@ export function UserManagementWorkspace({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                <p className="font-semibold text-slate-950">{user.fullName}</p>
-                <p className="text-sm text-slate-600">{user.email}</p>
+                    <p className="font-semibold text-slate-950">{user.fullName}</p>
+                    <p className="text-sm text-slate-600">{user.email}</p>
                   </div>
                   <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
                     {user.role}
@@ -396,6 +407,33 @@ export function UserManagementWorkspace({
                 <p className="mt-2 text-sm text-slate-500">
                   {user.branch || "No branch"} - {user.phone || "No phone"}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(() => {
+                    const status = loginStatuses.find((entry) => entry.userId === user.id);
+
+                    if (!status?.loginReady) {
+                      return (
+                        <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                          Login not ready
+                        </span>
+                      );
+                    }
+
+                    if (status.mustResetPassword) {
+                      return (
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                          Must reset password
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Login ready
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="mt-3 flex gap-3">
                   <button
                     type="button"
@@ -431,6 +469,26 @@ export function UserManagementWorkspace({
               <div className="rounded-[1.25rem] bg-slate-50 p-4">
                 <p className="font-semibold text-slate-950">{selectedUser.fullName}</p>
                 <p className="mt-1 text-sm text-slate-600">{selectedUser.email}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {!selectedUserLoginStatus?.loginReady ? (
+                    <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                      Login not ready
+                    </span>
+                  ) : selectedUserLoginStatus.mustResetPassword ? (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                      First login password reset pending
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      User can sign in now
+                    </span>
+                  )}
+                  {selectedUser.phone ? (
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      Phone login enabled
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-white p-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-orange-600">Home branch</p>

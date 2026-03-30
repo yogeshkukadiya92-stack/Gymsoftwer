@@ -1,6 +1,7 @@
 import {
   createManagedUser,
   deleteManagedUser,
+  getManagedUserLoginStatuses,
   requireRole,
   updateManagedUser,
 } from "@/lib/auth";
@@ -10,9 +11,11 @@ import { getAppData } from "@/lib/data";
 export async function GET() {
   await requireRole("admin");
   const data = await getAppData();
+  const loginStatuses = await getManagedUserLoginStatuses(data.profiles);
 
   return Response.json({
     users: data.profiles,
+    loginStatuses,
   });
 }
 
