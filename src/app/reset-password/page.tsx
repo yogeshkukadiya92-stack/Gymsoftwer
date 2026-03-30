@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 import { getAuthenticatedProfile } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function ResetPasswordPage() {
   const profile = await getAuthenticatedProfile();
 
