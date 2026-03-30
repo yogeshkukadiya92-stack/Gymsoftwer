@@ -1,18 +1,24 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { getDashboardData } from "@/lib/data";
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  memberPortalRoutes,
+  routeIsAllowed,
+} from "@/lib/user-permissions";
 import Link from "next/link";
 
-const navLinks = [
-  { href: "/member", label: "Overview" },
-  { href: "/member/workouts", label: "Workouts" },
-  { href: "/member/progress", label: "Progress" },
-  { href: "/member/schedule", label: "Schedule" },
-  { href: "/member/profile", label: "Profile" },
-];
-
 export default async function MemberWorkoutsPage() {
-  const { assignedPlan, data } = await getDashboardData("member");
+  const { viewer, assignedPlan, data } = await getDashboardData("member");
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/member/workouts", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const navLinks = filterNavLinksByRoutes(memberPortalRoutes, allowedRoutes);
 
   return (
     <AppShell

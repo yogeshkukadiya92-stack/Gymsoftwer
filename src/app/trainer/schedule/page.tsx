@@ -1,15 +1,23 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
-import { getAppData } from "@/lib/data";
-
-const trainerNavLinks = [
-  { href: "/trainer", label: "Overview" },
-  { href: "/trainer/clients", label: "Clients" },
-  { href: "/trainer/schedule", label: "Schedule" },
-];
+import { getDashboardData } from "@/lib/data";
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  routeIsAllowed,
+  trainerPortalRoutes,
+} from "@/lib/user-permissions";
 
 export default async function TrainerSchedulePage() {
-  const data = await getAppData();
+  const { data, viewer } = await getDashboardData("trainer");
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/trainer/schedule", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const trainerNavLinks = filterNavLinksByRoutes(trainerPortalRoutes, allowedRoutes);
 
   return (
     <AppShell

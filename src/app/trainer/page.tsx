@@ -1,18 +1,25 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
-import { getAppData } from "@/lib/data";
-
-const trainerNavLinks = [
-  { href: "/trainer", label: "Overview" },
-  { href: "/trainer/clients", label: "Clients" },
-  { href: "/trainer/schedule", label: "Schedule" },
-];
+import { getDashboardData } from "@/lib/data";
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  routeIsAllowed,
+  trainerPortalRoutes,
+} from "@/lib/user-permissions";
 
 export default async function TrainerDashboardPage() {
-  const data = await getAppData();
-  const trainers = data.profiles.filter((profile) => profile.role === "trainer");
-  const trainer = trainers[0] ?? data.profiles.find((profile) => profile.role === "trainer");
+  const { data, viewer } = await getDashboardData("trainer");
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/trainer", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const trainerNavLinks = filterNavLinksByRoutes(trainerPortalRoutes, allowedRoutes);
+  const trainer = viewer;
   const activePlans = data.workoutPlans.filter(
     (plan) => plan.coach === trainer?.fullName,
   );

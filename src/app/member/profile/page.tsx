@@ -1,18 +1,24 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/app-shell";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
 import { SectionCard } from "@/components/section-card";
 import { getDashboardData } from "@/lib/data";
-
-const navLinks = [
-  { href: "/member", label: "Overview" },
-  { href: "/member/workouts", label: "Workouts" },
-  { href: "/member/progress", label: "Progress" },
-  { href: "/member/schedule", label: "Schedule" },
-  { href: "/member/profile", label: "Profile" },
-];
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  memberPortalRoutes,
+  routeIsAllowed,
+} from "@/lib/user-permissions";
 
 export default async function MemberProfilePage() {
   const { viewer, data } = await getDashboardData("member");
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/member/profile", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const navLinks = filterNavLinksByRoutes(memberPortalRoutes, allowedRoutes);
   const membership = data.memberships.find((entry) => entry.memberId === viewer.id);
 
   return (

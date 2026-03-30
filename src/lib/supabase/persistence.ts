@@ -9,6 +9,7 @@ import {
   ProgressCheckIn,
   ProgressPhoto,
   Profile,
+  UserPermission,
 } from "@/lib/types";
 import {
   FormsStore,
@@ -58,6 +59,15 @@ function mapProfileRow(row: Record<string, unknown>): Profile {
     fitnessGoal: String(row.fitness_goal ?? ""),
     branch: String(row.branch ?? ""),
     joinedOn: String(row.joined_on ?? ""),
+  };
+}
+
+function mapUserPermissionRow(row: Record<string, unknown>): UserPermission {
+  return {
+    userId: String(row.user_id ?? ""),
+    allowedRoutes: Array.isArray(row.allowed_routes)
+      ? row.allowed_routes.map((item) => String(item))
+      : [],
   };
 }
 
@@ -347,6 +357,7 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
 
   const [
     profiles,
+    userPermissions,
     memberships,
     invoices,
     inventoryItems,
@@ -361,6 +372,7 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
     attendance,
   ] = await Promise.all([
     supabase.from("profiles").select("*"),
+    supabase.from("user_permissions").select("*"),
     supabase.from("memberships").select("*"),
     supabase.from("invoices").select("*"),
     supabase.from("inventory_items").select("*"),
@@ -445,6 +457,11 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
 
   return {
     profiles: mappedProfiles,
+    userPermissions: userPermissions.error
+      ? []
+      : (userPermissions.data ?? []).map((row) =>
+          mapUserPermissionRow(row as Record<string, unknown>),
+        ),
     gymBranches: Array.from(branchMap.values()),
     branchVisits: derivedVisits,
     memberships: (memberships.data ?? []).map((row) =>
@@ -478,6 +495,28 @@ export async function readSupabaseAppData(): Promise<AppData | null> {
       mapAttendanceRow(row as Record<string, unknown>),
     ),
   };
+}
+
+export async function upsertSupabaseUserPermission(permission: UserPermission) {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("user_permissions").upsert(
+    {
+      user_id: permission.userId,
+      allowed_routes: permission.allowedRoutes,
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return permission;
 }
 
 export async function createSupabaseGymBranch(input: Omit<GymBranch, "id">) {

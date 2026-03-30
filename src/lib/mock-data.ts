@@ -53,6 +53,7 @@ export const mockData: AppData = {
       joinedOn: "2026-02-03",
     },
   ],
+  userPermissions: [],
   gymBranches: [
     {
       id: "indore-central",

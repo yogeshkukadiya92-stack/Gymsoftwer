@@ -179,8 +179,14 @@ export type Profile = {
   joinedOn: string;
 };
 
+export type UserPermission = {
+  userId: string;
+  allowedRoutes: string[];
+};
+
 export type AppData = {
   profiles: Profile[];
+  userPermissions: UserPermission[];
   gymBranches: GymBranch[];
   branchVisits: BranchVisit[];
   memberships: Membership[];

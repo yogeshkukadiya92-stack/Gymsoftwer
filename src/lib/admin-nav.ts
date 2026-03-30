@@ -3,6 +3,7 @@ export const adminNavLinks = [
   { href: "/admin/reports", label: "Reports", category: "Dashboard" },
 
   { href: "/admin/users", label: "Users", category: "Clients" },
+  { href: "/admin/user-permissions", label: "Permissions", category: "Clients" },
   { href: "/admin/crm", label: "Lead CRM", category: "Clients" },
   { href: "/admin/memberships", label: "Memberships", category: "Clients" },
   { href: "/admin/progress", label: "Progress", category: "Clients" },

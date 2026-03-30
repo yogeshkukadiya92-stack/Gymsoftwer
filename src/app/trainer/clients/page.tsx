@@ -1,17 +1,25 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { TrainerNotesWorkspace } from "@/components/trainer-notes-workspace";
 import { getTrainerNotes } from "@/lib/business-data-store";
-import { getAppData } from "@/lib/data";
-
-const trainerNavLinks = [
-  { href: "/trainer", label: "Overview" },
-  { href: "/trainer/clients", label: "Clients" },
-  { href: "/trainer/schedule", label: "Schedule" },
-];
+import { getDashboardData } from "@/lib/data";
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  routeIsAllowed,
+  trainerPortalRoutes,
+} from "@/lib/user-permissions";
 
 export default async function TrainerClientsPage() {
-  const [data, trainerNotes] = await Promise.all([getAppData(), getTrainerNotes()]);
+  const [{ data, viewer }, trainerNotes] = await Promise.all([getDashboardData("trainer"), getTrainerNotes()]);
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/trainer/clients", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const trainerNavLinks = filterNavLinksByRoutes(trainerPortalRoutes, allowedRoutes);
   const clients = data.profiles.filter((profile) => profile.role === "member");
 
   return (

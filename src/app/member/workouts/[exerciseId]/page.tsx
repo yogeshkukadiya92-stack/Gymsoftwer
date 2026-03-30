@@ -1,18 +1,17 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { getDashboardData } from "@/lib/data";
 import { getEmbeddableExerciseUrl, isEmbeddableIframe } from "@/lib/exercise-media";
-
-const navLinks = [
-  { href: "/member", label: "Overview" },
-  { href: "/member/workouts", label: "Workouts" },
-  { href: "/member/progress", label: "Progress" },
-  { href: "/member/schedule", label: "Schedule" },
-  { href: "/member/profile", label: "Profile" },
-];
+import {
+  filterNavLinksByRoutes,
+  getAllowedRoutesForProfile,
+  getPortalFallbackRoute,
+  memberPortalRoutes,
+  routeIsAllowed,
+} from "@/lib/user-permissions";
 
 export default async function MemberExerciseViewerPage({
   params,
@@ -20,7 +19,12 @@ export default async function MemberExerciseViewerPage({
   params: Promise<{ exerciseId: string }>;
 }) {
   const { exerciseId } = await params;
-  const { data } = await getDashboardData("member");
+  const { data, viewer } = await getDashboardData("member");
+  const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
+  if (!routeIsAllowed("/member/workouts", allowedRoutes)) {
+    redirect(getPortalFallbackRoute(viewer, data));
+  }
+  const navLinks = filterNavLinksByRoutes(memberPortalRoutes, allowedRoutes);
   const exercise = data.exercises.find((item) => item.id === exerciseId);
 
   if (!exercise) {

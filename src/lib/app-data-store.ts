@@ -16,6 +16,7 @@ import {
   upsertSupabaseAttendanceEntry,
   upsertSupabaseInventoryItems,
   upsertSupabaseProfiles,
+  upsertSupabaseUserPermission,
   updateSupabaseProgressCheckIn,
 } from "@/lib/supabase/persistence";
 import {
@@ -29,6 +30,7 @@ import {
   Profile,
   ProgressCheckIn,
   ProgressPhoto,
+  UserPermission,
 } from "@/lib/types";
 
 const dataDirectory = path.join(process.cwd(), "data");
@@ -37,6 +39,7 @@ const storePath = path.join(dataDirectory, "app-data.json");
 function normalizeAppData(data: AppData): AppData {
   return {
     ...data,
+    userPermissions: (data.userPermissions ?? []) as UserPermission[],
     gymBranches: (data.gymBranches ?? []) as GymBranch[],
     branchVisits: (data.branchVisits ?? []) as BranchVisit[],
     invoices: data.invoices ?? [],
@@ -262,6 +265,37 @@ export async function importMembersToAppData(members: Profile[]) {
     updated,
     totalProfiles: nextStore.profiles.length,
   };
+}
+
+export async function saveUserPermissionSettings(input: UserPermission) {
+  try {
+    const supabasePermission = await upsertSupabaseUserPermission(input);
+
+    if (supabasePermission) {
+      return supabasePermission;
+    }
+  } catch {
+    // Fall back to local store if the live permissions table is not available yet.
+  }
+
+  const store = await readAppDataStore();
+  const nextPermission: UserPermission = {
+    userId: input.userId,
+    allowedRoutes: Array.from(new Set(input.allowedRoutes)),
+  };
+
+  const nextStore: AppData = {
+    ...store,
+    userPermissions: (store.userPermissions ?? []).some((entry) => entry.userId === input.userId)
+      ? (store.userPermissions ?? []).map((entry) =>
+          entry.userId === input.userId ? nextPermission : entry,
+        )
+      : [nextPermission, ...(store.userPermissions ?? [])],
+  };
+
+  await writeAppDataStore(nextStore);
+
+  return nextPermission;
 }
 
 type ProgressCheckInInput = Omit<ProgressCheckIn, "id">;
