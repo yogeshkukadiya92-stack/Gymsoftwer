@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
+import {
   FieldCondition,
   IntakeForm,
   IntakeFormField,
@@ -516,43 +523,40 @@ export function FormsWorkspace({
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
             Shareable forms
           </h2>
-          <div className="mt-4 grid gap-3">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-              placeholder="Search by title, description, or audience"
-            />
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <select
-                value={audienceFilter}
-                onChange={(event) => setAudienceFilter(event.target.value)}
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-              >
+          <div className="mt-4">
+            <FilterToolbar>
+              <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+                <FilterToolbarSearch
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by title, description, or audience"
+                />
+              </FilterToolbarItem>
+              <FilterToolbarItem>
+                <FilterToolbarSelect
+                  value={audienceFilter}
+                  onChange={(event) => setAudienceFilter(event.target.value)}
+                >
                 <option value="All audiences">All audiences</option>
                 {audienceOptions.map((audience) => (
                   <option key={audience} value={audience}>
                     {audience}
                   </option>
                 ))}
-              </select>
-              <select
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value as "title" | "responsesHigh" | "audience")}
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-              >
+                </FilterToolbarSelect>
+              </FilterToolbarItem>
+              <FilterToolbarItem>
+                <FilterToolbarSelect
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value as "title" | "responsesHigh" | "audience")}
+                >
                 <option value="title">Sort: Title</option>
                 <option value="responsesHigh">Sort: Most responses</option>
                 <option value="audience">Sort: Audience</option>
-              </select>
-              <a
-                href={filteredExportUrl}
-                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
-              >
-                Export current view
-              </a>
-            </div>
+                </FilterToolbarSelect>
+              </FilterToolbarItem>
+              <FilterToolbarAction href={filteredExportUrl}>Export current view</FilterToolbarAction>
+            </FilterToolbar>
           </div>
           <div className="mt-5 grid gap-3">
             {filteredForms.map((form) => (

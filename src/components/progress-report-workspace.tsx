@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
 import { Profile, ProgressCheckIn, ProgressPhoto } from "@/lib/types";
 
 type ProgressReportWorkspaceProps = {
@@ -105,57 +112,55 @@ export function ProgressReportWorkspace({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by member, branch, goal, or coach note"
-          className="min-w-[16rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-        <select
-          value={branchFilter}
-          onChange={(event) => setBranchFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+      <FilterToolbar>
+        <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+          <FilterToolbarSearch
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by member, branch, goal, or coach note"
+          />
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={branchFilter}
+            onChange={(event) => setBranchFilter(event.target.value)}
+          >
           <option value="All branches">All branches</option>
           {branchOptions.map((branch) => (
             <option key={branch} value={branch}>
               {branch}
             </option>
           ))}
-        </select>
-        <select
-          value={energyFilter}
-          onChange={(event) =>
-            setEnergyFilter(event.target.value as ProgressCheckIn["energyLevel"] | "All energy levels")
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={energyFilter}
+            onChange={(event) =>
+              setEnergyFilter(event.target.value as ProgressCheckIn["energyLevel"] | "All energy levels")
+            }
+          >
           <option value="All energy levels">All energy levels</option>
           <option value="Low">Low</option>
           <option value="Medium">Medium</option>
           <option value="High">High</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(event) =>
-            setSortBy(event.target.value as "latestDate" | "weightDeltaHigh" | "name" | "branch")
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(event.target.value as "latestDate" | "weightDeltaHigh" | "name" | "branch")
+            }
+          >
           <option value="latestDate">Sort: Latest check-in</option>
           <option value="weightDeltaHigh">Sort: Highest weight delta</option>
           <option value="name">Sort: Name</option>
           <option value="branch">Sort: Branch</option>
-        </select>
-        <a
-          href={exportUrl}
-          className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
-        >
-          Export current view
-        </a>
-      </div>
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+      </FilterToolbar>
 
       <div className="space-y-4">
         {rows.map((item) => (

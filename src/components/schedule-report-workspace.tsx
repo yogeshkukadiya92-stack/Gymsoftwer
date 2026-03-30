@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
 import { Attendance, ClassSession } from "@/lib/types";
 
 type ScheduleReportWorkspaceProps = {
@@ -81,55 +88,53 @@ export function ScheduleReportWorkspace({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by class, day, coach, branch, or room"
-          className="min-w-[16rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-        <select
-          value={dayFilter}
-          onChange={(event) => setDayFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+      <FilterToolbar>
+        <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+          <FilterToolbarSearch
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by class, day, coach, branch, or room"
+          />
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={dayFilter}
+            onChange={(event) => setDayFilter(event.target.value)}
+          >
           <option value="All days">All days</option>
           {dayOptions.map((day) => (
             <option key={day} value={day}>
               {day}
             </option>
           ))}
-        </select>
-        <select
-          value={coachFilter}
-          onChange={(event) => setCoachFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={coachFilter}
+            onChange={(event) => setCoachFilter(event.target.value)}
+          >
           <option value="All coaches">All coaches</option>
           {coachOptions.map((coach) => (
             <option key={coach} value={coach}>
               {coach}
             </option>
           ))}
-        </select>
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as "dayTime" | "attendanceHigh" | "coach" | "title")}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as "dayTime" | "attendanceHigh" | "coach" | "title")}
+          >
           <option value="dayTime">Sort: Day and time</option>
           <option value="attendanceHigh">Sort: Highest attendance</option>
           <option value="coach">Sort: Coach</option>
           <option value="title">Sort: Title</option>
-        </select>
-        <a
-          href={exportUrl}
-          className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
-        >
-          Export current view
-        </a>
-      </div>
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+      </FilterToolbar>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {filteredSessions.map(({ session, registeredCount, presentCount, missedCount }) => (

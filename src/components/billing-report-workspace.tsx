@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
 import { Invoice, Membership, Profile } from "@/lib/types";
 
@@ -168,72 +175,71 @@ export function BillingReportWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by member, email, phone, or branch"
-          className="min-w-[16rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-        <select
-          value={branchFilter}
-          onChange={(event) => setBranchFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+      <FilterToolbar>
+        <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+          <FilterToolbarSearch
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by member, email, phone, or branch"
+          />
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={branchFilter}
+            onChange={(event) => setBranchFilter(event.target.value)}
+          >
           <option value="All branches">All branches</option>
           {branchOptions.map((branch) => (
             <option key={branch} value={branch}>
               {branch}
             </option>
           ))}
-        </select>
-        <select
-          value={membershipStatusFilter}
-          onChange={(event) =>
-            setMembershipStatusFilter(event.target.value as Membership["status"] | "All memberships")
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={membershipStatusFilter}
+            onChange={(event) =>
+              setMembershipStatusFilter(event.target.value as Membership["status"] | "All memberships")
+            }
+          >
           <option value="All memberships">All memberships</option>
           <option value="Active">Active</option>
           <option value="Expiring Soon">Expiring Soon</option>
           <option value="On Hold">On Hold</option>
-        </select>
-        <select
-          value={invoiceStatusFilter}
-          onChange={(event) =>
-            setInvoiceStatusFilter(event.target.value as Invoice["status"] | "All invoices")
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={invoiceStatusFilter}
+            onChange={(event) =>
+              setInvoiceStatusFilter(event.target.value as Invoice["status"] | "All invoices")
+            }
+          >
           <option value="All invoices">All invoices</option>
           <option value="Paid">Paid</option>
           <option value="Pending">Pending</option>
           <option value="Overdue">Overdue</option>
           <option value="Partially Paid">Partially Paid</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(event) =>
-            setSortBy(
-              event.target.value as "outstandingHigh" | "outstandingLow" | "collectedHigh" | "name",
-            )
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(
+                event.target.value as "outstandingHigh" | "outstandingLow" | "collectedHigh" | "name",
+              )
+            }
+          >
           <option value="outstandingHigh">Sort: Highest outstanding</option>
           <option value="outstandingLow">Sort: Lowest outstanding</option>
           <option value="collectedHigh">Sort: Highest collected</option>
           <option value="name">Sort: Name</option>
-        </select>
-        <a
-          href={exportUrl}
-          className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700 transition hover:border-orange-300"
-        >
-          Export current view
-        </a>
-      </div>
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+      </FilterToolbar>
 
       <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">

@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
 import { Profile, WorkoutAssignment, WorkoutPlan } from "@/lib/types";
 
 type PlansReportWorkspaceProps = {
@@ -77,56 +84,54 @@ export function PlansReportWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by plan, goal, coach, or split"
-          className="min-w-[16rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-        <select
-          value={coachFilter}
-          onChange={(event) => setCoachFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+      <FilterToolbar>
+        <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+          <FilterToolbarSearch
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by plan, goal, coach, or split"
+          />
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={coachFilter}
+            onChange={(event) => setCoachFilter(event.target.value)}
+          >
           <option value="All coaches">All coaches</option>
           {coachOptions.map((coach) => (
             <option key={coach} value={coach}>
               {coach}
             </option>
           ))}
-        </select>
-        <select
-          value={assignmentStatusFilter}
-          onChange={(event) =>
-            setAssignmentStatusFilter(
-              event.target.value as WorkoutAssignment["status"] | "All assignments",
-            )
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={assignmentStatusFilter}
+            onChange={(event) =>
+              setAssignmentStatusFilter(
+                event.target.value as WorkoutAssignment["status"] | "All assignments",
+              )
+            }
+          >
           <option value="All assignments">All assignments</option>
           <option value="Active">Active</option>
           <option value="Paused">Paused</option>
           <option value="Completed">Completed</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as "name" | "coach" | "durationHigh")}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as "name" | "coach" | "durationHigh")}
+          >
           <option value="name">Sort: Name</option>
           <option value="coach">Sort: Coach</option>
           <option value="durationHigh">Sort: Longest duration</option>
-        </select>
-        <a
-          href={exportUrl}
-          className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
-        >
-          Export current view
-        </a>
-      </div>
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+      </FilterToolbar>
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5">

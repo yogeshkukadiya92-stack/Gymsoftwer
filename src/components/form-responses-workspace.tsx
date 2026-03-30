@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+} from "@/components/filter-toolbar";
 import { IntakeForm, IntakeFormResponse, NewIntakeFormInput } from "@/lib/forms";
 
 type FormResponsesWorkspaceProps = {
@@ -220,19 +226,18 @@ export function FormResponsesWorkspace({
               <p className="mt-3 text-xl font-semibold">{selectedForm?.audience ?? "-"}</p>
             </div>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <label className="block md:col-span-3">
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                Search responses
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="Search inside submitted answers"
-              />
-            </label>
+          <div className="mt-5 space-y-4">
+            <FilterToolbar>
+              <FilterToolbarItem className="min-w-[16rem] flex-[1.6]">
+                <FilterToolbarSearch
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search inside submitted answers"
+                />
+              </FilterToolbarItem>
+              <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+            </FilterToolbar>
+            <div className="grid gap-4 md:grid-cols-3">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Filter by date
@@ -266,6 +271,7 @@ export function FormResponsesWorkspace({
                 className="w-full rounded-2xl border border-slate-300 px-4 py-3"
               />
             </label>
+            </div>
           </div>
           <div className="mt-4">
             <div className="flex flex-wrap gap-3">
@@ -281,12 +287,6 @@ export function FormResponsesWorkspace({
               >
                 Reset filters
               </button>
-              <a
-                href={exportUrl}
-                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700"
-              >
-                Export current view
-              </a>
             </div>
           </div>
         </div>

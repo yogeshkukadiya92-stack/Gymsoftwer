@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  FilterToolbar,
+  FilterToolbarAction,
+  FilterToolbarItem,
+  FilterToolbarSearch,
+  FilterToolbarSelect,
+} from "@/components/filter-toolbar";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
 import { Membership, Profile } from "@/lib/types";
 
@@ -100,70 +107,69 @@ export function MembershipsReportWorkspace({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search by member, email, branch, plan, or payment method"
-          className="min-w-[16rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        />
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as Membership["status"] | "All statuses")}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+      <FilterToolbar>
+        <FilterToolbarItem className="min-w-[16rem] flex-[1.4]">
+          <FilterToolbarSearch
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by member, email, branch, plan, or payment method"
+          />
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as Membership["status"] | "All statuses")}
+          >
           <option value="All statuses">All statuses</option>
           <option value="Active">Active</option>
           <option value="Expiring Soon">Expiring Soon</option>
           <option value="On Hold">On Hold</option>
-        </select>
-        <select
-          value={paymentFilter}
-          onChange={(event) =>
-            setPaymentFilter(
-              event.target.value as Membership["paymentStatus"] | "All payment statuses",
-            )
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={paymentFilter}
+            onChange={(event) =>
+              setPaymentFilter(
+                event.target.value as Membership["paymentStatus"] | "All payment statuses",
+              )
+            }
+          >
           <option value="All payment statuses">All payment statuses</option>
           <option value="Paid">Paid</option>
           <option value="Pending">Pending</option>
           <option value="Overdue">Overdue</option>
           <option value="Partially Paid">Partially Paid</option>
-        </select>
-        <select
-          value={branchFilter}
-          onChange={(event) => setBranchFilter(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={branchFilter}
+            onChange={(event) => setBranchFilter(event.target.value)}
+          >
           <option value="All branches">All branches</option>
           {branchOptions.map((branch) => (
             <option key={branch} value={branch}>
               {branch}
             </option>
           ))}
-        </select>
-        <select
-          value={sortBy}
-          onChange={(event) =>
-            setSortBy(event.target.value as "renewalSoon" | "outstandingHigh" | "name" | "branch")
-          }
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarItem>
+          <FilterToolbarSelect
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(event.target.value as "renewalSoon" | "outstandingHigh" | "name" | "branch")
+            }
+          >
           <option value="renewalSoon">Sort: Renewal soon</option>
           <option value="outstandingHigh">Sort: Highest outstanding</option>
           <option value="name">Sort: Name</option>
           <option value="branch">Sort: Branch</option>
-        </select>
-        <a
-          href={exportUrl}
-          className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
-        >
-          Export current view
-        </a>
-      </div>
+          </FilterToolbarSelect>
+        </FilterToolbarItem>
+        <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
+      </FilterToolbar>
 
       <div className="space-y-4">
         {filteredMemberships.map(({ membership, member }) => (
