@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  dangerButtonClassName,
+  fieldClassName,
+  panelClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+} from "@/components/filter-toolbar";
 import { DEFAULT_FIRST_LOGIN_PASSWORD } from "@/lib/account-policy";
 import { getUserBranchHistory } from "@/lib/branch-utils";
 import { ManagedUserLoginStatus } from "@/lib/auth";
@@ -307,7 +314,7 @@ export function UserManagementWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+      <div className={panelClassName}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="font-serif text-2xl text-slate-950">Bulk user tools</h3>
@@ -318,17 +325,17 @@ export function UserManagementWorkspace({
           <div className="flex flex-wrap gap-3">
             <a
               href={filteredExportUrl}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+              className={secondaryButtonClassName}
             >
               Export filtered users Excel
             </a>
             <a
               href="/api/admin/users/template"
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+              className={secondaryButtonClassName}
             >
               Download sample file
             </a>
-            <label className="cursor-pointer rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white">
+            <label className={`${primaryButtonClassName} cursor-pointer`}>
               {isImporting ? "Importing..." : "Import users Excel"}
               <input
                 type="file"
@@ -345,7 +352,7 @@ export function UserManagementWorkspace({
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
         <form
           onSubmit={handleSubmit}
-          className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]"
+          className={panelClassName}
         >
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-serif text-2xl text-slate-950">
@@ -355,7 +362,7 @@ export function UserManagementWorkspace({
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+                className={secondaryButtonClassName}
               >
                 Cancel
               </button>
@@ -369,7 +376,7 @@ export function UserManagementWorkspace({
               </div>
             ) : null}
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder="Full name"
               value={formState.fullName}
               onChange={(event) =>
@@ -377,7 +384,7 @@ export function UserManagementWorkspace({
               }
             />
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder="Email"
               type="email"
               value={formState.email}
@@ -386,7 +393,7 @@ export function UserManagementWorkspace({
               }
             />
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder={editingUserId ? "Leave blank to keep current password" : "Default password"}
               type="password"
               value={formState.password}
@@ -395,7 +402,7 @@ export function UserManagementWorkspace({
               }
             />
             <select
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               value={formState.role}
               onChange={(event) =>
                 setFormState((current) => ({
@@ -409,7 +416,7 @@ export function UserManagementWorkspace({
               <option value="admin">Admin</option>
             </select>
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder="Phone"
               value={formState.phone}
               onChange={(event) =>
@@ -417,7 +424,7 @@ export function UserManagementWorkspace({
               }
             />
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder="Fitness goal"
               value={formState.fitnessGoal}
               onChange={(event) =>
@@ -428,7 +435,7 @@ export function UserManagementWorkspace({
               }
             />
             <input
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+              className={fieldClassName}
               placeholder="Branch"
               value={formState.branch}
               onChange={(event) =>
@@ -441,26 +448,26 @@ export function UserManagementWorkspace({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-slate-950 px-5 py-3 text-sm font-medium text-white"
+              className={primaryButtonClassName}
             >
               {isSubmitting ? "Saving..." : editingUserId ? "Save changes" : "Create user"}
             </button>
           </div>
         </form>
 
-        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
         <div className="mt-4 space-y-3">
-          <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+          <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-4">
             <input
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+              className={fieldClassName}
               placeholder="Search by name, email, phone, or access label"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
             <div className="grid gap-3 md:grid-cols-2">
               <select
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                className={fieldClassName}
                 value={roleFilter}
                 onChange={(event) =>
                   setRoleFilter(event.target.value as "all" | "member" | "trainer" | "admin")
@@ -472,7 +479,7 @@ export function UserManagementWorkspace({
                 <option value="admin">Admin</option>
               </select>
               <select
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                className={fieldClassName}
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as "all" | "ready" | "reset" | "not-ready")
@@ -485,7 +492,7 @@ export function UserManagementWorkspace({
               </select>
             </div>
             <select
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+              className={fieldClassName}
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -507,8 +514,8 @@ export function UserManagementWorkspace({
                 onClick={() => setSelectedUserId(user.id)}
                 className={`block w-full rounded-[1.25rem] p-4 text-left transition ${
                   selectedUserId === user.id
-                    ? "border border-orange-200 bg-orange-50"
-                    : "border border-transparent bg-slate-50 hover:border-slate-200"
+                    ? "border border-orange-200 bg-gradient-to-br from-orange-50 to-white shadow-[0_16px_40px_rgba(249,115,22,0.10)]"
+                    : "border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] hover:border-slate-300"
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -564,7 +571,7 @@ export function UserManagementWorkspace({
                       event.stopPropagation();
                       handleEdit(user);
                     }}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
+                    className={secondaryButtonClassName}
                   >
                     Edit
                   </button>
@@ -575,7 +582,7 @@ export function UserManagementWorkspace({
                       handleDelete(user);
                     }}
                     disabled={isDeleting === user.id}
-                    className="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
+                    className={dangerButtonClassName}
                   >
                     {isDeleting === user.id ? "Deleting..." : "Delete"}
                   </button>
@@ -590,7 +597,7 @@ export function UserManagementWorkspace({
         </div>
       </div>
 
-        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">User branch history</h3>
           {selectedUser && selectedUserBranchHistory ? (
             <div className="mt-4 space-y-4">

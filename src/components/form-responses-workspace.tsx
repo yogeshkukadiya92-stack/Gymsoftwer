@@ -3,10 +3,17 @@
 import { useMemo, useState } from "react";
 
 import {
+  fieldClassName,
   FilterToolbar,
   FilterToolbarAction,
   FilterToolbarItem,
   FilterToolbarSearch,
+  secondaryButtonClassName,
+  tableBodyCellClassName,
+  tableClassName,
+  tableHeaderCellClassName,
+  tableRowClassName,
+  tableShellClassName,
 } from "@/components/filter-toolbar";
 import { IntakeForm, IntakeFormResponse, NewIntakeFormInput } from "@/lib/forms";
 
@@ -246,7 +253,7 @@ export function FormResponsesWorkspace({
                 type="date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                className={fieldClassName}
               />
             </label>
             <label className="block">
@@ -257,7 +264,7 @@ export function FormResponsesWorkspace({
                 type="time"
                 value={fromTime}
                 onChange={(event) => setFromTime(event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                className={fieldClassName}
               />
             </label>
             <label className="block">
@@ -268,7 +275,7 @@ export function FormResponsesWorkspace({
                 type="time"
                 value={toTime}
                 onChange={(event) => setToTime(event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                className={fieldClassName}
               />
             </label>
             </div>
@@ -283,7 +290,7 @@ export function FormResponsesWorkspace({
                   setToTime("");
                   setSearchQuery("");
                 }}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                className={secondaryButtonClassName}
               >
                 Reset filters
               </button>
@@ -291,7 +298,7 @@ export function FormResponsesWorkspace({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={tableShellClassName}>
           <div className="border-b border-slate-200 px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
               Raw table
@@ -302,27 +309,21 @@ export function FormResponsesWorkspace({
           </div>
           <div className="overflow-x-auto">
             {selectedResponses.length > 0 ? (
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-slate-950 text-white">
+              <table className={tableClassName}>
+                <thead>
                   <tr>
                     {columns.map((column) => (
-                      <th key={column.id} className="px-4 py-4 font-medium whitespace-nowrap">
+                      <th key={column.id} className={tableHeaderCellClassName}>
                         {column.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedResponses.map((response, index) => (
-                    <tr
-                      key={response.id}
-                      className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}
-                    >
+                  {selectedResponses.map((response) => (
+                    <tr key={response.id} className={tableRowClassName}>
                       {columns.map((column) => (
-                        <td
-                          key={`${response.id}-${column.id}`}
-                          className="border-t border-slate-200 px-4 py-4 align-top text-slate-700"
-                        >
+                        <td key={`${response.id}-${column.id}`} className={tableBodyCellClassName}>
                           {column.id === "submittedAt"
                             ? response.submittedAt
                             : response.answers[column.id] || "-"}

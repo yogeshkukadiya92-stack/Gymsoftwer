@@ -4,11 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
+  accentButtonClassName,
+  fieldClassName,
   FilterToolbar,
   FilterToolbarAction,
   FilterToolbarItem,
   FilterToolbarSearch,
   FilterToolbarSelect,
+  panelClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+  textareaClassName,
 } from "@/components/filter-toolbar";
 import {
   FieldCondition,
@@ -283,7 +289,7 @@ export function FormsWorkspace({
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <section className="space-y-6">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={panelClassName}>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
             {editingFormId ? "Edit form" : "Create form"}
           </p>
@@ -298,7 +304,7 @@ export function FormsWorkspace({
               onChange={(event) =>
                 setFormState((current) => ({ ...current, title: event.target.value }))
               }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
+              className={fieldClassName}
               placeholder="Form title"
             />
             <textarea
@@ -309,7 +315,7 @@ export function FormsWorkspace({
                   description: event.target.value,
                 }))
               }
-              className="min-h-28 rounded-2xl border border-slate-300 px-4 py-3"
+              className={textareaClassName}
               placeholder="What information do you want to collect?"
             />
             <input
@@ -317,7 +323,7 @@ export function FormsWorkspace({
               onChange={(event) =>
                 setFormState((current) => ({ ...current, audience: event.target.value }))
               }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
+              className={fieldClassName}
               placeholder="Audience"
             />
           </div>
@@ -330,7 +336,7 @@ export function FormsWorkspace({
               <button
                 type="button"
                 onClick={() => syncFields([...builderFields, createEmptyField()])}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                className={secondaryButtonClassName}
               >
                 Add question
               </button>
@@ -340,7 +346,10 @@ export function FormsWorkspace({
               const candidateParents = builderFields.filter((item) => item.id !== field.id);
 
               return (
-                <div key={field.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                <div
+                  key={field.id}
+                  className="rounded-[1.5rem] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)]"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold text-slate-950">Question {index + 1}</p>
                     <button
@@ -348,7 +357,7 @@ export function FormsWorkspace({
                       onClick={() =>
                         syncFields(builderFields.filter((item) => item.id !== field.id))
                       }
-                      className="rounded-full border border-rose-200 px-3 py-1 text-sm font-medium text-rose-700"
+                      className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                     >
                       Remove
                     </button>
@@ -365,7 +374,7 @@ export function FormsWorkspace({
                           ),
                         )
                       }
-                      className="rounded-2xl border border-slate-300 px-4 py-3"
+                      className={fieldClassName}
                       placeholder="Question label"
                     />
                     <div className="grid gap-4 md:grid-cols-[1fr_auto]">
@@ -383,7 +392,7 @@ export function FormsWorkspace({
                             ),
                           )
                         }
-                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        className={fieldClassName}
                       >
                         {fieldTypeOptions.map((type) => (
                           <option key={type} value={type}>
@@ -391,7 +400,7 @@ export function FormsWorkspace({
                           </option>
                         ))}
                       </select>
-                      <label className="flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-700">
+                      <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                         <input
                           type="checkbox"
                           checked={field.required}
@@ -423,7 +432,7 @@ export function FormsWorkspace({
                             ),
                           )
                         }
-                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        className={fieldClassName}
                         placeholder="Enter options separated by commas. Example: Beginner, Intermediate, Advanced"
                       />
                     ) : null}
@@ -440,7 +449,7 @@ export function FormsWorkspace({
                             ),
                           )
                         }
-                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        className={fieldClassName}
                       >
                         <option value="">Always show</option>
                         {candidateParents.map((item) => (
@@ -460,7 +469,7 @@ export function FormsWorkspace({
                             ),
                           )
                         }
-                        className="rounded-2xl border border-slate-300 px-4 py-3"
+                        className={fieldClassName}
                         placeholder="Show if answer equals..."
                       />
                     </div>
@@ -476,7 +485,7 @@ export function FormsWorkspace({
                 type="button"
                 onClick={editingFormId ? saveFormChanges : createForm}
                 disabled={isCreating}
-                className="rounded-full bg-orange-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-70"
+                className={accentButtonClassName}
               >
                 {isCreating
                   ? editingFormId
@@ -490,7 +499,7 @@ export function FormsWorkspace({
                 <button
                   type="button"
                   onClick={resetBuilder}
-                  className="rounded-full border border-slate-300 px-5 py-3 font-semibold text-slate-700"
+                  className={secondaryButtonClassName}
                 >
                   Cancel edit
                 </button>
@@ -499,7 +508,7 @@ export function FormsWorkspace({
           </div>
 
           {createResult ? (
-            <div className="mt-5 rounded-[1.5rem] bg-slate-50 p-4">
+            <div className="mt-5 rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,0.96))] p-4">
               {createResult.error ? (
                 <p className="font-medium text-rose-700">{createResult.error}</p>
               ) : null}
@@ -507,7 +516,7 @@ export function FormsWorkspace({
                 <p className="font-medium text-emerald-700">{createResult.message}</p>
               ) : null}
               {shareUrl ? (
-                <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm text-slate-700">
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
                   <p className="font-semibold text-slate-950">Shareable link</p>
                   <p className="mt-2 break-all">{shareUrl}</p>
                 </div>
@@ -516,7 +525,7 @@ export function FormsWorkspace({
           ) : null}
         </div>
 
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={panelClassName}>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
             Forms list
           </p>
@@ -566,8 +575,8 @@ export function FormsWorkspace({
                 onClick={() => setSelectedFormId(form.id)}
                 className={`rounded-[1.5rem] border p-4 text-left ${
                   selectedForm?.id === form.id
-                    ? "border-orange-300 bg-orange-50"
-                    : "border-slate-200 bg-white"
+                    ? "border-orange-300 bg-gradient-to-br from-orange-50 to-white shadow-[0_14px_36px_rgba(249,115,22,0.10)]"
+                    : "border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] hover:border-slate-300"
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -584,7 +593,7 @@ export function FormsWorkspace({
                       event.stopPropagation();
                       loadFormIntoBuilder(form);
                     }}
-                    className="inline-flex cursor-pointer rounded-full border border-slate-300 px-3 py-1 text-sm font-medium text-slate-700"
+                    className={secondaryButtonClassName}
                   >
                     Edit form
                   </span>
@@ -601,7 +610,7 @@ export function FormsWorkspace({
       </section>
 
       <section className="space-y-6">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <div className={panelClassName}>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
             Form preview
           </p>
@@ -613,7 +622,7 @@ export function FormsWorkspace({
             {selectedForm ? (
               <Link
                 href={`/forms/${selectedForm.slug}`}
-                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                className={primaryButtonClassName}
               >
                 Open public form
               </Link>
