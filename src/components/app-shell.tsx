@@ -9,6 +9,7 @@ import { UserRole } from "@/lib/types";
 type NavLink = {
   href: string;
   label: string;
+  category?: string;
 };
 
 type AppShellProps = {
@@ -42,9 +43,11 @@ export function AppShell({
               <p className="max-w-2xl text-sm text-slate-300">{subtitle}</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-start gap-3 text-sm">
+          <div className="grid flex-1 gap-3 text-sm lg:min-w-[640px]">
             <AppShellNav navLinks={navLinks} />
-            <LogoutButton />
+            <div className="flex justify-start lg:justify-end">
+              <LogoutButton />
+            </div>
           </div>
         </div>
         {!hasSupabaseEnv ? (
