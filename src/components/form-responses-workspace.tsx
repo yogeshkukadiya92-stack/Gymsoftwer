@@ -15,6 +15,7 @@ export function FormResponsesWorkspace({
 }: FormResponsesWorkspaceProps) {
   const [formsState, setFormsState] = useState(forms);
   const [selectedFormId, setSelectedFormId] = useState(forms[0]?.id ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [fromTime, setFromTime] = useState("");
   const [toTime, setToTime] = useState("");
@@ -35,14 +36,18 @@ export function FormResponsesWorkspace({
       const [datePart = "", timePart = ""] = response.submittedAt.split(" ");
       const normalizedResponseDate = datePart;
       const normalizedResponseTime = timePart;
+      const matchesSearch =
+        !searchQuery.trim() ||
+        response.submittedAt.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        Object.values(response.answers).join(" ").toLowerCase().includes(searchQuery.trim().toLowerCase());
 
       const matchesDate = !selectedDate || normalizedResponseDate === selectedDate;
       const matchesFromTime = !fromTime || normalizedResponseTime >= fromTime;
       const matchesToTime = !toTime || normalizedResponseTime <= toTime;
 
-      return matchesDate && matchesFromTime && matchesToTime;
+      return matchesDate && matchesFromTime && matchesToTime && matchesSearch;
     });
-  }, [responses, selectedForm, selectedDate, fromTime, toTime]);
+  }, [responses, searchQuery, selectedForm, selectedDate, fromTime, toTime]);
 
   const columns = selectedForm
     ? [
@@ -53,6 +58,16 @@ export function FormResponsesWorkspace({
         })),
       ]
     : [];
+  const selectedFormIdForExport = selectedForm?.id ?? "";
+  const exportUrl = (() => {
+    const params = new URLSearchParams();
+    if (selectedFormIdForExport) params.set("formId", selectedFormIdForExport);
+    if (selectedDate) params.set("date", selectedDate);
+    if (fromTime) params.set("fromTime", fromTime);
+    if (toTime) params.set("toTime", toTime);
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    return `/api/admin/form-responses/export?${params.toString()}`;
+  })();
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
@@ -206,6 +221,18 @@ export function FormResponsesWorkspace({
             </div>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <label className="block md:col-span-3">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Search responses
+              </span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+                placeholder="Search inside submitted answers"
+              />
+            </label>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Filter by date
@@ -241,17 +268,26 @@ export function FormResponsesWorkspace({
             </label>
           </div>
           <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDate("");
-                setFromTime("");
-                setToTime("");
-              }}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-            >
-              Reset time filters
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate("");
+                  setFromTime("");
+                  setToTime("");
+                  setSearchQuery("");
+                }}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Reset filters
+              </button>
+              <a
+                href={exportUrl}
+                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700"
+              >
+                Export current view
+              </a>
+            </div>
           </div>
         </div>
 

@@ -623,6 +623,102 @@ export function buildProgressWorkbook(
   return workbook;
 }
 
+export function buildWorkoutPlansWorkbook(
+  planRows: Array<{
+    id: string;
+    name: string;
+    goal: string;
+    coach: string;
+    split: string;
+    durationWeeks: number;
+    exerciseCount: number;
+  }>,
+  assignmentRows: Array<{
+    id: string;
+    memberName: string;
+    memberEmail: string;
+    planName: string;
+    startDate: string;
+    status: string;
+  }>,
+) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      planRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        goal: row.goal,
+        coach: row.coach,
+        split: row.split,
+        duration_weeks: row.durationWeeks,
+        exercise_count: row.exerciseCount,
+      })),
+    ),
+    "workout_plans",
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      assignmentRows.map((row) => ({
+        id: row.id,
+        member_name: row.memberName,
+        member_email: row.memberEmail,
+        plan_name: row.planName,
+        start_date: row.startDate,
+        status: row.status,
+      })),
+    ),
+    "assignments",
+  );
+
+  return workbook;
+}
+
+export function buildFormsWorkbook(forms: Array<{
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  audience: string;
+  status: string;
+  fieldCount: number;
+  responseCount: number;
+}>) {
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    toJsonSheet(
+      forms.map((form) => ({
+        id: form.id,
+        slug: form.slug,
+        title: form.title,
+        description: form.description,
+        audience: form.audience,
+        status: form.status,
+        field_count: form.fieldCount,
+        response_count: form.responseCount,
+      })),
+    ),
+    "forms",
+  );
+
+  return workbook;
+}
+
+export function buildFormResponsesWorkbook(
+  rows: Array<Record<string, string>>,
+  sheetName = "responses",
+) {
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(rows), sheetName);
+  return workbook;
+}
+
 export function buildLeadsWorkbook(leads: LeadRecord[]) {
   const workbook = XLSX.utils.book_new();
 

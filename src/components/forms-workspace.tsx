@@ -122,6 +122,9 @@ export function FormsWorkspace({
 }: FormsWorkspaceProps) {
   const [forms, setForms] = useState<IntakeForm[]>(initialForms);
   const [responses] = useState<IntakeFormResponse[]>(initialResponses);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [audienceFilter, setAudienceFilter] = useState("All audiences");
+  const [sortBy, setSortBy] = useState<"title" | "responsesHigh" | "audience">("title");
   const [selectedFormId, setSelectedFormId] = useState(initialForms[0]?.id ?? "");
   const [formState, setFormState] = useState<NewIntakeFormInput>(initialFormState);
   const [builderFields, setBuilderFields] = useState<BuilderField[]>(
@@ -131,11 +134,52 @@ export function FormsWorkspace({
   const [createResult, setCreateResult] = useState<CreateFormResult | null>(null);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
 
-  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? forms[0];
+  const audienceOptions = useMemo(
+    () => Array.from(new Set(forms.map((form) => form.audience).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [forms],
+  );
+  const filteredForms = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+
+    return [...forms]
+      .filter((form) => {
+        const matchesSearch =
+          !normalized ||
+          [form.title, form.description, form.audience].join(" ").toLowerCase().includes(normalized);
+        const matchesAudience = audienceFilter === "All audiences" || form.audience === audienceFilter;
+        return matchesSearch && matchesAudience;
+      })
+      .sort((a, b) => {
+        const responseCountA = responses.filter((response) => response.formId === a.id).length;
+        const responseCountB = responses.filter((response) => response.formId === b.id).length;
+
+        switch (sortBy) {
+          case "responsesHigh":
+            return responseCountB - responseCountA || a.title.localeCompare(b.title);
+          case "audience":
+            return a.audience.localeCompare(b.audience) || a.title.localeCompare(b.title);
+          case "title":
+          default:
+            return a.title.localeCompare(b.title);
+        }
+      });
+  }, [audienceFilter, forms, responses, searchQuery, sortBy]);
+  const selectedForm =
+    filteredForms.find((form) => form.id === selectedFormId) ??
+    forms.find((form) => form.id === selectedFormId) ??
+    filteredForms[0] ??
+    forms[0];
   const selectedResponses = useMemo(
     () => responses.filter((response) => response.formId === selectedForm?.id),
     [responses, selectedForm],
   );
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    if (audienceFilter !== "All audiences") params.set("audience", audienceFilter);
+    params.set("sort", sortBy);
+    return `/api/admin/forms/export?${params.toString()}`;
+  }, [audienceFilter, searchQuery, sortBy]);
 
   function syncFields(nextFields: BuilderField[]) {
     setBuilderFields(nextFields);
@@ -472,8 +516,46 @@ export function FormsWorkspace({
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
             Shareable forms
           </h2>
+          <div className="mt-4 grid gap-3">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="rounded-2xl border border-slate-300 px-4 py-3"
+              placeholder="Search by title, description, or audience"
+            />
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <select
+                value={audienceFilter}
+                onChange={(event) => setAudienceFilter(event.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3"
+              >
+                <option value="All audiences">All audiences</option>
+                {audienceOptions.map((audience) => (
+                  <option key={audience} value={audience}>
+                    {audience}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value as "title" | "responsesHigh" | "audience")}
+                className="rounded-2xl border border-slate-300 px-4 py-3"
+              >
+                <option value="title">Sort: Title</option>
+                <option value="responsesHigh">Sort: Most responses</option>
+                <option value="audience">Sort: Audience</option>
+              </select>
+              <a
+                href={filteredExportUrl}
+                className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
+              >
+                Export current view
+              </a>
+            </div>
+          </div>
           <div className="mt-5 grid gap-3">
-            {forms.map((form) => (
+            {filteredForms.map((form) => (
               <button
                 key={form.id}
                 type="button"
@@ -505,6 +587,11 @@ export function FormsWorkspace({
                 </div>
               </button>
             ))}
+            {filteredForms.length === 0 ? (
+              <div className="rounded-[1.5rem] border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+                No forms match the current filters.
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
