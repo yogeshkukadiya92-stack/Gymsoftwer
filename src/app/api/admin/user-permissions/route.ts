@@ -6,6 +6,7 @@ export async function PUT(request: Request) {
 
   const body = (await request.json()) as {
     userId?: string;
+    accessLabel?: string;
     allowedRoutes?: string[];
   };
 
@@ -19,6 +20,7 @@ export async function PUT(request: Request) {
   try {
     const permission = await saveUserPermissionSettings({
       userId: body.userId.trim(),
+      accessLabel: body.accessLabel?.trim() || "",
       allowedRoutes: body.allowedRoutes.filter((route) => typeof route === "string"),
     });
 

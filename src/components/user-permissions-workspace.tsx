@@ -17,6 +17,9 @@ export function UserPermissionsWorkspace({
   const managedUsers = useMemo(() => users, [users]);
   const [permissions, setPermissions] = useState(initialPermissions);
   const [selectedUserId, setSelectedUserId] = useState(managedUsers[0]?.id ?? "");
+  const [accessLabel, setAccessLabel] = useState(
+    initialPermissions.find((item) => item.userId === managedUsers[0]?.id)?.accessLabel ?? "",
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,6 +44,7 @@ export function UserPermissionsWorkspace({
 
       const nextPermission = {
         userId: selectedUser.id,
+        accessLabel,
         allowedRoutes: nextRoutes,
       };
 
@@ -50,7 +54,7 @@ export function UserPermissionsWorkspace({
     });
   }
 
-  function applyPreset(allowedPresetRoutes: string[]) {
+  function applyPreset(label: string, allowedPresetRoutes: string[]) {
     if (!selectedUser) {
       return;
     }
@@ -58,6 +62,7 @@ export function UserPermissionsWorkspace({
     setPermissions((current) => {
       const nextPermission = {
         userId: selectedUser.id,
+        accessLabel: label,
         allowedRoutes: allowedPresetRoutes,
       };
 
@@ -68,7 +73,15 @@ export function UserPermissionsWorkspace({
         : [nextPermission, ...current];
     });
 
+    setAccessLabel(label);
     setStatusMessage("Preset applied. Click save permissions to confirm.");
+  }
+
+  function handleSelectUser(userId: string) {
+    setSelectedUserId(userId);
+    const permission = permissions.find((item) => item.userId === userId);
+    setAccessLabel(permission?.accessLabel ?? "");
+    setStatusMessage("");
   }
 
   async function savePermissions() {
@@ -87,6 +100,7 @@ export function UserPermissionsWorkspace({
       },
       body: JSON.stringify({
         userId: selectedUser.id,
+        accessLabel,
         allowedRoutes: currentPermission?.allowedRoutes ?? options.map((item) => item.href),
       }),
     });
@@ -115,7 +129,7 @@ export function UserPermissionsWorkspace({
             <button
               key={user.id}
               type="button"
-              onClick={() => setSelectedUserId(user.id)}
+              onClick={() => handleSelectUser(user.id)}
               className={`block w-full rounded-[1.25rem] border p-4 text-left transition ${
                 selectedUserId === user.id
                   ? "border-orange-200 bg-orange-50"
@@ -124,6 +138,11 @@ export function UserPermissionsWorkspace({
             >
               <p className="font-semibold text-slate-950">{user.fullName}</p>
               <p className="mt-1 text-sm text-slate-600">{user.email}</p>
+              {permissions.find((item) => item.userId === user.id)?.accessLabel ? (
+                <p className="mt-2 text-sm font-medium text-orange-700">
+                  {permissions.find((item) => item.userId === user.id)?.accessLabel}
+                </p>
+              ) : null}
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {user.role}
               </p>
@@ -163,7 +182,7 @@ export function UserPermissionsWorkspace({
                       <button
                         key={preset.id}
                         type="button"
-                        onClick={() => applyPreset(preset.allowedRoutes)}
+                        onClick={() => applyPreset(preset.label, preset.allowedRoutes)}
                         className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
                       >
                         {preset.label}
@@ -172,6 +191,15 @@ export function UserPermissionsWorkspace({
                   </div>
                 </div>
               ) : null}
+              <label className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-medium text-slate-950">Custom access title</p>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                  placeholder="Billing staff, Reception, Online trainer"
+                  value={accessLabel}
+                  onChange={(event) => setAccessLabel(event.target.value)}
+                />
+              </label>
               {options.map((option) => {
                 const checked = allowedRoutes.includes(option.href);
 

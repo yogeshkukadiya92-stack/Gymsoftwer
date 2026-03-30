@@ -281,6 +281,7 @@ export async function saveUserPermissionSettings(input: UserPermission) {
   const store = await readAppDataStore();
   const nextPermission: UserPermission = {
     userId: input.userId,
+    accessLabel: input.accessLabel?.trim() || "",
     allowedRoutes: Array.from(new Set(input.allowedRoutes)),
   };
 

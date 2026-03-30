@@ -181,6 +181,7 @@ export type Profile = {
 
 export type UserPermission = {
   userId: string;
+  accessLabel?: string;
   allowedRoutes: string[];
 };
 

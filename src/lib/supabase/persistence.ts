@@ -65,6 +65,7 @@ function mapProfileRow(row: Record<string, unknown>): Profile {
 function mapUserPermissionRow(row: Record<string, unknown>): UserPermission {
   return {
     userId: String(row.user_id ?? ""),
+    accessLabel: String(row.access_label ?? ""),
     allowedRoutes: Array.isArray(row.allowed_routes)
       ? row.allowed_routes.map((item) => String(item))
       : [],
@@ -507,6 +508,7 @@ export async function upsertSupabaseUserPermission(permission: UserPermission) {
   const { error } = await supabase.from("user_permissions").upsert(
     {
       user_id: permission.userId,
+      access_label: permission.accessLabel ?? "",
       allowed_routes: permission.allowedRoutes,
     },
     { onConflict: "user_id" },

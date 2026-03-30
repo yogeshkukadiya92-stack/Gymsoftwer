@@ -240,5 +240,6 @@ create table if not exists trainer_notes (
 
 create table if not exists user_permissions (
   user_id text primary key references profiles(id) on delete cascade,
+  access_label text not null default '',
   allowed_routes jsonb not null default '[]'::jsonb
 );
