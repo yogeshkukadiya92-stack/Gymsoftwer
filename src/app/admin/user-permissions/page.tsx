@@ -11,7 +11,7 @@ export default async function AdminUserPermissionsPage() {
     <AppShell
       role="admin"
       title="User permissions"
-      subtitle="Choose exactly which portal pages each member or trainer can open."
+      subtitle="Choose exactly which portal pages each admin, trainer, or member can open."
       navLinks={adminNavLinks}
     >
       <SectionCard eyebrow="Access control" title="Portal visibility">

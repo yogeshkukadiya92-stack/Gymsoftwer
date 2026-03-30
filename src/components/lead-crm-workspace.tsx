@@ -26,6 +26,11 @@ const emptyForm = {
 export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps) {
   const [leads, setLeads] = useState(initialLeads);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "All statuses">("All statuses");
+  const [sourceFilter, setSourceFilter] = useState<LeadSource | "All sources">("All sources");
+  const [sortBy, setSortBy] = useState<"nextFollowUp" | "recent" | "name" | "status" | "source">(
+    "nextFollowUp",
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [formState, setFormState] = useState(emptyForm);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -47,18 +52,55 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
 
   const filteredLeads = useMemo(() => {
     const normalized = query.trim().toLowerCase();
+    return leads
+      .filter((lead) => {
+        const matchesQuery =
+          !normalized ||
+          [lead.fullName, lead.phone, lead.goal, lead.source, lead.status, lead.assignedTo, lead.note]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalized);
+        const matchesStatus = statusFilter === "All statuses" || lead.status === statusFilter;
+        const matchesSource = sourceFilter === "All sources" || lead.source === sourceFilter;
 
-    if (!normalized) {
-      return leads;
+        return matchesQuery && matchesStatus && matchesSource;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "name":
+            return a.fullName.localeCompare(b.fullName);
+          case "source":
+            return a.source.localeCompare(b.source) || a.fullName.localeCompare(b.fullName);
+          case "status":
+            return a.status.localeCompare(b.status) || a.fullName.localeCompare(b.fullName);
+          case "recent":
+            return b.nextFollowUp.localeCompare(a.nextFollowUp);
+          case "nextFollowUp":
+          default:
+            return a.nextFollowUp.localeCompare(b.nextFollowUp);
+        }
+      });
+  }, [leads, query, sourceFilter, statusFilter, sortBy]);
+
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (query.trim()) {
+      params.set("search", query.trim());
     }
 
-    return leads.filter((lead) =>
-      [lead.fullName, lead.phone, lead.goal, lead.source, lead.status, lead.assignedTo, lead.note]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized),
-    );
-  }, [leads, query]);
+    if (statusFilter !== "All statuses") {
+      params.set("status", statusFilter);
+    }
+
+    if (sourceFilter !== "All sources") {
+      params.set("source", sourceFilter);
+    }
+
+    params.set("sort", sortBy);
+
+    return `/api/admin/crm/export?${params.toString()}`;
+  }, [query, sortBy, sourceFilter, statusFilter]);
 
   function resetForm() {
     setFormState(emptyForm);
@@ -217,10 +259,10 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => handleDownload("/api/admin/crm/export")}
+              onClick={() => handleDownload(filteredExportUrl)}
               className="rounded-full border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-medium text-orange-700"
             >
-              Export leads Excel
+              Export current leads view
             </button>
             <button
               type="button"
@@ -380,13 +422,52 @@ export function LeadCrmWorkspace({ leads: initialLeads }: LeadCrmWorkspaceProps)
         </div>
       </form>
 
-      <input
-        type="search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by lead name, goal, source, or coach..."
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-      />
+      <div className="grid gap-4 lg:grid-cols-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by lead name, goal, source, or coach..."
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+        />
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as LeadStatus | "All statuses")}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+        >
+          <option value="All statuses">All statuses</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sourceFilter}
+          onChange={(event) => setSourceFilter(event.target.value as LeadSource | "All sources")}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+        >
+          <option value="All sources">All sources</option>
+          {sources.map((source) => (
+            <option key={source} value={source}>
+              {source}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sortBy}
+          onChange={(event) =>
+            setSortBy(event.target.value as "nextFollowUp" | "recent" | "name" | "status" | "source")
+          }
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+        >
+          <option value="nextFollowUp">Sort: Next follow-up</option>
+          <option value="recent">Sort: Latest follow-up</option>
+          <option value="name">Sort: Name</option>
+          <option value="status">Sort: Status</option>
+          <option value="source">Sort: Source</option>
+        </select>
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
         {statuses.map((status) => (

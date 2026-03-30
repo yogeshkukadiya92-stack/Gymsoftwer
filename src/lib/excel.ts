@@ -407,6 +407,33 @@ export function buildUsersTemplateWorkbook() {
   return workbook;
 }
 
+export function buildUserPermissionsWorkbook(
+  profiles: Profile[],
+  permissions: AppData["userPermissions"],
+) {
+  const workbook = XLSX.utils.book_new();
+
+  const permissionRows = profiles.map((profile) => {
+    const permission = permissions.find((item) => item.userId === profile.id);
+
+    return {
+      user_id: profile.id,
+      full_name: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      branch: profile.branch,
+      access_label: permission?.accessLabel ?? "",
+      allowed_routes_count: permission?.allowedRoutes.length ?? 0,
+      allowed_routes: (permission?.allowedRoutes ?? []).join(", "),
+    };
+  });
+
+  XLSX.utils.book_append_sheet(workbook, toJsonSheet(permissionRows), "user_permissions");
+
+  return workbook;
+}
+
 export function buildLeadsWorkbook(leads: LeadRecord[]) {
   const workbook = XLSX.utils.book_new();
 

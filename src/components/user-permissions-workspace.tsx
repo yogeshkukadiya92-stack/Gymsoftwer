@@ -15,6 +15,12 @@ export function UserPermissionsWorkspace({
   initialPermissions,
 }: UserPermissionsWorkspaceProps) {
   const managedUsers = useMemo(() => users, [users]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<Profile["role"] | "All roles">("All roles");
+  const [accessFilter, setAccessFilter] = useState<
+    "All access" | "With custom access label" | "Without custom access label"
+  >("All access");
+  const [sortBy, setSortBy] = useState<"name" | "role" | "access" | "branch">("name");
   const [permissions, setPermissions] = useState(initialPermissions);
   const [selectedUserId, setSelectedUserId] = useState(managedUsers[0]?.id ?? "");
   const [accessLabel, setAccessLabel] = useState(
@@ -23,13 +29,79 @@ export function UserPermissionsWorkspace({
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const selectedUser = managedUsers.find((user) => user.id === selectedUserId) ?? managedUsers[0];
+  const filteredUsers = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+
+    return [...managedUsers]
+      .filter((user) => {
+        const permission = permissions.find((item) => item.userId === user.id);
+        const accessLabel = permission?.accessLabel ?? "";
+        const matchesSearch =
+          !normalized ||
+          [user.fullName, user.email, user.phone, user.branch, accessLabel]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalized);
+        const matchesRole = roleFilter === "All roles" || user.role === roleFilter;
+        const matchesAccess =
+          accessFilter === "All access" ||
+          (accessFilter === "With custom access label"
+            ? Boolean(accessLabel.trim())
+            : !accessLabel.trim());
+
+        return matchesSearch && matchesRole && matchesAccess;
+      })
+      .sort((a, b) => {
+        const permissionA = permissions.find((item) => item.userId === a.id);
+        const permissionB = permissions.find((item) => item.userId === b.id);
+
+        switch (sortBy) {
+          case "role":
+            return a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName);
+          case "access":
+            return (
+              (permissionA?.accessLabel ?? "").localeCompare(permissionB?.accessLabel ?? "") ||
+              a.fullName.localeCompare(b.fullName)
+            );
+          case "branch":
+            return a.branch.localeCompare(b.branch) || a.fullName.localeCompare(b.fullName);
+          case "name":
+          default:
+            return a.fullName.localeCompare(b.fullName);
+        }
+      });
+  }, [accessFilter, managedUsers, permissions, roleFilter, searchQuery, sortBy]);
+
+  const selectedUser =
+    filteredUsers.find((user) => user.id === selectedUserId) ??
+    managedUsers.find((user) => user.id === selectedUserId) ??
+    filteredUsers[0] ??
+    managedUsers[0];
   const options = selectedUser ? getPermissionOptionsForRole(selectedUser.role) : [];
   const rolePresets = selectedUser
     ? permissionPresets.filter((preset) => preset.role === selectedUser.role)
     : [];
   const selectedPermission = permissions.find((item) => item.userId === selectedUser?.id);
   const allowedRoutes = selectedPermission?.allowedRoutes ?? options.map((item) => item.href);
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
+
+    if (roleFilter !== "All roles") {
+      params.set("role", roleFilter);
+    }
+
+    if (accessFilter !== "All access") {
+      params.set("access", accessFilter);
+    }
+
+    params.set("sort", sortBy);
+
+    return `/api/admin/user-permissions/export?${params.toString()}`;
+  }, [accessFilter, roleFilter, searchQuery, sortBy]);
 
   function toggleRoute(route: string) {
     if (!selectedUser) {
@@ -124,8 +196,68 @@ export function UserPermissionsWorkspace({
         <p className="mt-2 text-sm text-slate-500">
           Choose a member or trainer and decide which portal pages they are allowed to open.
         </p>
+        <div className="mt-4 grid gap-3">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by name, email, phone, branch, or access label"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            <select
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value as Profile["role"] | "All roles")}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+            >
+              <option value="All roles">All roles</option>
+              <option value="admin">Admin</option>
+              <option value="trainer">Trainer</option>
+              <option value="member">Member</option>
+            </select>
+            <select
+              value={accessFilter}
+              onChange={(event) =>
+                setAccessFilter(
+                  event.target.value as
+                    | "All access"
+                    | "With custom access label"
+                    | "Without custom access label",
+                )
+              }
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+            >
+              <option value="All access">All access</option>
+              <option value="With custom access label">With custom access label</option>
+              <option value="Without custom access label">Without custom access label</option>
+            </select>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <select
+              value={sortBy}
+              onChange={(event) =>
+                setSortBy(event.target.value as "name" | "role" | "access" | "branch")
+              }
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+            >
+              <option value="name">Sort: Name</option>
+              <option value="role">Sort: Role</option>
+              <option value="access">Sort: Access label</option>
+              <option value="branch">Sort: Branch</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = filteredExportUrl;
+              }}
+              className="rounded-full border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700"
+            >
+              Export current view
+            </button>
+          </div>
+        </div>
         <div className="mt-4 space-y-3">
-          {managedUsers.map((user) => (
+          {filteredUsers.map((user) => (
             <button
               key={user.id}
               type="button"
@@ -148,6 +280,11 @@ export function UserPermissionsWorkspace({
               </p>
             </button>
           ))}
+          {filteredUsers.length === 0 ? (
+            <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+              No users match the current permission filters.
+            </div>
+          ) : null}
         </div>
       </div>
 

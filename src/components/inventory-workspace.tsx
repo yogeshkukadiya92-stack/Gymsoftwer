@@ -80,6 +80,11 @@ export function InventoryWorkspace({
   const [sales, setSales] = useState(initialSales);
   const [searchQuery, setSearchQuery] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("All suppliers");
+  const [categoryFilter, setCategoryFilter] = useState("All categories");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [sortBy, setSortBy] = useState<"name" | "stockHigh" | "stockLow" | "expirySoon" | "marginHigh">(
+    "name",
+  );
   const [itemForm, setItemForm] = useState<ItemFormState>(buildItemForm());
   const [saleForm, setSaleForm] = useState<SaleFormState>(
     buildSaleForm(initialItems[0]?.id ?? ""),
@@ -103,22 +108,54 @@ export function InventoryWorkspace({
         !searchQuery ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.batchCode.toLowerCase().includes(searchQuery.toLowerCase());
+        item.batchCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.supplementType.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSupplier =
         supplierFilter === "All suppliers" || item.supplierName === supplierFilter;
+      const matchesCategory =
+        categoryFilter === "All categories" || item.category === categoryFilter;
+      const matchesStatus = statusFilter === "All statuses" || item.status === statusFilter;
 
-      return matchesSearch && matchesSupplier;
+      return matchesSearch && matchesSupplier && matchesCategory && matchesStatus;
     });
-  }, [items, searchQuery, supplierFilter]);
+  }, [items, searchQuery, supplierFilter, categoryFilter, statusFilter]);
   const sortedItems = useMemo(
-    () => [...filteredItems].sort((a, b) => a.name.localeCompare(b.name)),
-    [filteredItems],
+    () =>
+      [...filteredItems].sort((a, b) => {
+        switch (sortBy) {
+          case "stockHigh":
+            return b.stockUnits - a.stockUnits || a.name.localeCompare(b.name);
+          case "stockLow":
+            return a.stockUnits - b.stockUnits || a.name.localeCompare(b.name);
+          case "expirySoon":
+            return (a.expiryDate || "9999-12-31").localeCompare(b.expiryDate || "9999-12-31");
+          case "marginHigh":
+            return (
+              b.sellingPriceInr -
+              b.costPriceInr -
+              (a.sellingPriceInr - a.costPriceInr) ||
+              a.name.localeCompare(b.name)
+            );
+          case "name":
+          default:
+            return a.name.localeCompare(b.name);
+        }
+      }),
+    [filteredItems, sortBy],
   );
   const allSuppliers = useMemo(
     () =>
       Array.from(
         new Set(items.map((item) => item.supplierName).filter(Boolean)),
       ).sort((a, b) => a.localeCompare(b)),
+    [items],
+  );
+  const allCategories = useMemo(
+    () =>
+      Array.from(new Set(items.map((item) => item.category).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
     [items],
   );
   const expiryItems = useMemo(
@@ -142,6 +179,29 @@ export function InventoryWorkspace({
       }, 0),
     [items, sales],
   );
+  const filteredExportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
+
+    if (supplierFilter !== "All suppliers") {
+      params.set("supplier", supplierFilter);
+    }
+
+    if (categoryFilter !== "All categories") {
+      params.set("category", categoryFilter);
+    }
+
+    if (statusFilter !== "All statuses") {
+      params.set("status", statusFilter);
+    }
+
+    params.set("sort", sortBy);
+
+    return `/api/admin/inventory/export?${params.toString()}`;
+  }, [categoryFilter, searchQuery, sortBy, statusFilter, supplierFilter]);
 
   async function handleAddItem(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -330,11 +390,11 @@ export function InventoryWorkspace({
             <button
               type="button"
               onClick={() =>
-                downloadWorkbook("/api/admin/inventory/export", "gymflow-inventory.xlsx")
+                downloadWorkbook(filteredExportUrl, "gymflow-inventory.xlsx")
               }
               className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:text-orange-700"
             >
-              Export inventory
+              Export current inventory view
             </button>
             <button
               type="button"
@@ -363,7 +423,7 @@ export function InventoryWorkspace({
 
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <h3 className="font-serif text-2xl text-slate-950">Search and filter</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <input
               type="text"
               placeholder="Search by name, SKU, or batch"
@@ -382,6 +442,48 @@ export function InventoryWorkspace({
                   {supplier}
                 </option>
               ))}
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-orange-400"
+            >
+              <option value="All categories">All categories</option>
+              {allCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-orange-400"
+            >
+              <option value="All statuses">All statuses</option>
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(event) =>
+                setSortBy(
+                  event.target.value as
+                    | "name"
+                    | "stockHigh"
+                    | "stockLow"
+                    | "expirySoon"
+                    | "marginHigh",
+                )
+              }
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-orange-400 sm:col-span-2 lg:col-span-2"
+            >
+              <option value="name">Sort: Name</option>
+              <option value="stockHigh">Sort: Highest stock</option>
+              <option value="stockLow">Sort: Lowest stock</option>
+              <option value="expirySoon">Sort: Expiry soon</option>
+              <option value="marginHigh">Sort: Highest margin</option>
             </select>
           </div>
         </div>
