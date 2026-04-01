@@ -12,6 +12,8 @@ import {
   starterForms,
   starterResponses,
 } from "@/lib/forms";
+import { normalizePhoneForLogin } from "@/lib/account-policy";
+import { getAppData } from "@/lib/data";
 import {
   createSupabaseForm,
   createSupabaseFormResponse,
@@ -278,19 +280,35 @@ export async function createFormResponse(
   formId: string,
   answers: Record<string, string>,
 ) {
-  const supabaseResponse = await createSupabaseFormResponse(formId, answers);
+  const store = await getFormsStore();
+  const form = store.forms.find((item) => item.id === formId) ?? null;
+  const phoneField =
+    form?.fields.find((field) => field.type === "phone") ??
+    form?.fields.find((field) => /phone|mobile|whatsapp/i.test(field.label));
+  const respondentPhone = phoneField ? answers[phoneField.id] ?? "" : "";
+  const normalizedPhone = normalizePhoneForLogin(respondentPhone);
+  const appData = await getAppData();
+  const matchedProfile = normalizedPhone
+    ? appData.profiles.find(
+        (profile) => normalizePhoneForLogin(profile.phone) === normalizedPhone,
+      )
+    : undefined;
+  const supabaseResponse = await createSupabaseFormResponse(formId, answers, {
+    memberId: matchedProfile?.id,
+    respondentPhone: respondentPhone || undefined,
+  });
 
   if (supabaseResponse) {
     return supabaseResponse;
   }
-
-  const store = await readStore();
 
   const response: IntakeFormResponse = {
     id: `response-${crypto.randomUUID()}`,
     formId,
     submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
     answers,
+    memberId: matchedProfile?.id,
+    respondentPhone: respondentPhone || undefined,
   };
 
   const nextStore: FormsStore = {

@@ -17,6 +17,7 @@ export const memberPortalRoutes: PermissionOption[] = [
   { href: "/member/workouts", label: "Workouts" },
   { href: "/member/progress", label: "Progress" },
   { href: "/member/schedule", label: "Schedule" },
+  { href: "/member/forms", label: "My forms" },
   { href: "/member/profile", label: "Profile" },
 ];
 
@@ -53,13 +54,13 @@ export const permissionPresets: PermissionPreset[] = [
     id: "member-basic",
     label: "Basic member",
     role: "member",
-    allowedRoutes: ["/member", "/member/schedule", "/member/profile"],
+    allowedRoutes: ["/member", "/member/schedule", "/member/forms", "/member/profile"],
   },
   {
     id: "member-premium",
     label: "Premium member",
     role: "member",
-    allowedRoutes: ["/member", "/member/workouts", "/member/progress", "/member/schedule", "/member/profile"],
+    allowedRoutes: ["/member", "/member/workouts", "/member/progress", "/member/schedule", "/member/forms", "/member/profile"],
   },
   {
     id: "trainer-limited",

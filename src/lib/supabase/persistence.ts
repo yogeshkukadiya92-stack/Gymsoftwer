@@ -252,12 +252,16 @@ function mapResponseRow(row: {
   form_id: string;
   submitted_at: string;
   answers: Record<string, string>;
+  member_id?: string | null;
+  respondent_phone?: string | null;
 }): IntakeFormResponse {
   return {
     id: row.id,
     formId: row.form_id,
     submittedAt: row.submitted_at.replace("T", " ").slice(0, 16),
     answers: row.answers ?? {},
+    memberId: row.member_id ?? undefined,
+    respondentPhone: row.respondent_phone ?? undefined,
   };
 }
 
@@ -761,6 +765,8 @@ export async function getSupabaseFormsStore(): Promise<FormsStore | null> {
           form_id: string;
           submitted_at: string;
           answers: Record<string, string>;
+          member_id?: string | null;
+          respondent_phone?: string | null;
         },
       ),
     ),
@@ -899,6 +905,10 @@ export async function deleteSupabaseForm(formId: string) {
 export async function createSupabaseFormResponse(
   formId: string,
   answers: Record<string, string>,
+  ownership?: {
+    memberId?: string;
+    respondentPhone?: string;
+  },
 ) {
   const supabase = await createSupabaseServerClient();
 
@@ -911,6 +921,8 @@ export async function createSupabaseFormResponse(
     formId,
     submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
     answers,
+    memberId: ownership?.memberId,
+    respondentPhone: ownership?.respondentPhone,
   };
 
   const { error } = await supabase.from("intake_form_responses").insert({
@@ -918,6 +930,8 @@ export async function createSupabaseFormResponse(
     form_id: response.formId,
     submitted_at: response.submittedAt.replace(" ", "T"),
     answers: response.answers,
+    member_id: response.memberId ?? null,
+    respondent_phone: response.respondentPhone ?? null,
   });
 
   if (error) {

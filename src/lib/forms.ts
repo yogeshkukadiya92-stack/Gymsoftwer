@@ -155,6 +155,8 @@ export type IntakeFormResponse = {
   formId: string;
   submittedAt: string;
   answers: Record<string, string>;
+  memberId?: string;
+  respondentPhone?: string;
 };
 
 export type FormsStore = {
@@ -237,6 +239,7 @@ export const starterResponses: IntakeFormResponse[] = [
     id: "response-1",
     formId: "form-1",
     submittedAt: "2026-03-18 08:45",
+    respondentPhone: "+91 98765 40000",
     answers: {
       name: "Riya Sharma",
       phone: "+91 98765 40000",
@@ -249,6 +252,7 @@ export const starterResponses: IntakeFormResponse[] = [
     id: "response-2",
     formId: "form-1",
     submittedAt: "2026-03-18 09:05",
+    respondentPhone: "+91 98765 41111",
     answers: {
       name: "Parth Mehta",
       phone: "+91 98765 41111",

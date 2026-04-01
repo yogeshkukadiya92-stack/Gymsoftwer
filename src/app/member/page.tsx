@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { getDashboardData } from "@/lib/data";
+import { getAllFormResponses } from "@/lib/forms-store";
 import {
   filterNavLinksByRoutes,
   getAllowedRoutesForProfile,
@@ -15,12 +16,14 @@ import {
 export default async function MemberDashboardPage() {
   const dashboard = await getDashboardData("member");
   const { data, viewer, assignedPlan, membershipStatus, completedSessions, bookedClasses } = dashboard;
+  const allFormResponses = await getAllFormResponses();
   const allowedRoutes = getAllowedRoutesForProfile(viewer, data.userPermissions);
   if (!routeIsAllowed("/member", allowedRoutes)) {
     redirect(getPortalFallbackRoute(viewer, data));
   }
   const navLinks = filterNavLinksByRoutes(memberPortalRoutes, allowedRoutes);
   const firstName = viewer.fullName?.split(" ")[0] || "Member";
+  const myFormResponses = allFormResponses.filter((response) => response.memberId === viewer.id);
 
   return (
     <AppShell
@@ -44,6 +47,11 @@ export default async function MemberDashboardPage() {
           label="Membership"
           value={membershipStatus ?? "Unavailable"}
           detail="Membership status is visible here without requiring payment integration."
+        />
+        <StatCard
+          label="My forms"
+          value={String(myFormResponses.length)}
+          detail="Only forms submitted with your registered phone number appear in your portal."
         />
       </div>
 
