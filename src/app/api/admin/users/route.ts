@@ -24,6 +24,8 @@ export async function POST(request: Request) {
   await requireRole("admin");
 
   const body = (await request.json()) as {
+    action?: "create" | "repair";
+    id?: string;
     fullName?: string;
     email?: string;
     password?: string;
@@ -32,6 +34,41 @@ export async function POST(request: Request) {
     fitnessGoal?: string;
     branch?: string;
   };
+
+  if (body.action === "repair") {
+    if (!body.id?.trim()) {
+      return Response.json({ error: "User id is required for repair." }, { status: 400 });
+    }
+
+    const data = await getAppData();
+    const existingUser = data.profiles.find((profile) => profile.id === body.id);
+
+    if (!existingUser) {
+      return Response.json({ error: "User not found." }, { status: 404 });
+    }
+
+    try {
+      const user = await createManagedUser({
+        fullName: existingUser.fullName,
+        email: existingUser.email,
+        password: body.password?.trim() || DEFAULT_FIRST_LOGIN_PASSWORD,
+        role: existingUser.role,
+        phone: existingUser.phone?.trim(),
+        fitnessGoal: existingUser.fitnessGoal?.trim(),
+        branch: existingUser.branch?.trim(),
+      });
+
+      return Response.json({
+        message: `Login repaired successfully. Default password: ${DEFAULT_FIRST_LOGIN_PASSWORD}`,
+        user,
+      });
+    } catch (error) {
+      return Response.json(
+        { error: error instanceof Error ? error.message : "User repair failed." },
+        { status: 400 },
+      );
+    }
+  }
 
   if (!body.fullName?.trim() || !body.email?.trim() || !body.role) {
     return Response.json(

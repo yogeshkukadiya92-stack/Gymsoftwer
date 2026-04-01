@@ -60,6 +60,7 @@ export function UserManagementWorkspace({
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRepairing, setIsRepairing] = useState<string | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
@@ -198,6 +199,46 @@ export function UserManagementWorkspace({
     }
 
     setIsVerifying(false);
+  }
+
+  async function handleRepairLogin(user?: Profile) {
+    const targetUser = user ?? selectedUser;
+
+    if (!targetUser) {
+      return;
+    }
+
+    setIsRepairing(targetUser.id);
+    setStatusMessage("");
+
+    const response = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "repair",
+        id: targetUser.id,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      setStatusMessage(payload.error ?? `Login repair failed for ${targetUser.fullName}.`);
+      setIsRepairing(null);
+      return;
+    }
+
+    await handleVerifyLogin(targetUser);
+    setStatusMessage(
+      payload.message ??
+        `Login repaired successfully for ${targetUser.fullName}. Default password: ${DEFAULT_FIRST_LOGIN_PASSWORD}`,
+    );
+    setIsRepairing(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -478,6 +519,14 @@ export function UserManagementWorkspace({
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
+                onClick={() => handleRepairLogin()}
+                disabled={isRepairing !== null || !selectedUser}
+                className={secondaryButtonClassName}
+              >
+                {isRepairing && selectedUser ? "Repairing..." : "Repair login"}
+              </button>
+              <button
+                type="button"
                 onClick={() => handleVerifyLogin()}
                 disabled={isVerifying || !selectedUser}
                 className={secondaryButtonClassName}
@@ -605,6 +654,17 @@ export function UserManagementWorkspace({
                   })()}
                 </div>
                 <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleRepairLogin(user);
+                    }}
+                    disabled={isRepairing !== null}
+                    className={secondaryButtonClassName}
+                  >
+                    {isRepairing === user.id ? "Repairing..." : "Repair login"}
+                  </button>
                   <button
                     type="button"
                     onClick={(event) => {
