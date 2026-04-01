@@ -880,6 +880,22 @@ export async function updateSupabaseForm(formId: string, input: NewIntakeFormInp
   return updatedForm;
 }
 
+export async function deleteSupabaseForm(formId: string) {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase.from("intake_forms").delete().eq("id", formId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { id: formId };
+}
+
 export async function createSupabaseFormResponse(
   formId: string,
   answers: Record<string, string>,

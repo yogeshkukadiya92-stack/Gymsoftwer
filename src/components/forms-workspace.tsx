@@ -145,7 +145,7 @@ export function FormsWorkspace({
   initialResponses,
 }: FormsWorkspaceProps) {
   const [forms, setForms] = useState<IntakeForm[]>(initialForms);
-  const [responses] = useState<IntakeFormResponse[]>(initialResponses);
+  const [responses, setResponses] = useState<IntakeFormResponse[]>(initialResponses);
   const [searchQuery, setSearchQuery] = useState("");
   const [audienceFilter, setAudienceFilter] = useState("All audiences");
   const [sortBy, setSortBy] = useState<"title" | "responsesHigh" | "audience">("title");
@@ -158,6 +158,7 @@ export function FormsWorkspace({
   const [createResult, setCreateResult] = useState<CreateFormResult | null>(null);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
   const [fieldTypeSearch, setFieldTypeSearch] = useState("");
+  const [isDeletingFormId, setIsDeletingFormId] = useState<string | null>(null);
 
   const audienceOptions = useMemo(
     () => Array.from(new Set(forms.map((form) => form.audience).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
@@ -291,6 +292,50 @@ export function FormsWorkspace({
 
     setCreateResult(payload);
     setIsCreating(false);
+  }
+
+  async function deleteForm(form: IntakeForm) {
+    const confirmed = window.confirm(
+      `Delete "${form.title}"? This will also remove its saved responses from the app.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingFormId(form.id);
+    setCreateResult(null);
+
+    const response = await fetch("/api/admin/forms", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: form.id }),
+    });
+
+    const payload = (await response.json()) as { message?: string; error?: string };
+
+    if (response.ok) {
+      const nextForms = forms.filter((item) => item.id !== form.id);
+      setForms(nextForms);
+      setResponses((current) => current.filter((item) => item.formId !== form.id));
+      setSelectedFormId(nextForms[0]?.id ?? "");
+
+      if (editingFormId === form.id) {
+        resetBuilder();
+      }
+
+      setCreateResult({
+        message: payload.message ?? "Form deleted successfully.",
+      });
+    } else {
+      setCreateResult({
+        error: payload.error ?? "Form delete failed.",
+      });
+    }
+
+    setIsDeletingFormId(null);
   }
 
   const shareUrl =
@@ -749,15 +794,26 @@ export function FormsWorkspace({
                 <p className="mt-2 text-sm text-slate-600">{form.description}</p>
                 <p className="mt-3 text-sm text-slate-500">{form.audience}</p>
                 <div className="mt-4">
-                  <span
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      loadFormIntoBuilder(form);
-                    }}
-                    className={secondaryButtonClassName}
-                  >
-                    Edit form
-                  </span>
+                  <div className="flex flex-wrap gap-3">
+                    <span
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        loadFormIntoBuilder(form);
+                      }}
+                      className={secondaryButtonClassName}
+                    >
+                      Edit form
+                    </span>
+                    <span
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void deleteForm(form);
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                    >
+                      {isDeletingFormId === form.id ? "Deleting..." : "Delete form"}
+                    </span>
+                  </div>
                 </div>
               </button>
             ))}
@@ -788,6 +844,14 @@ export function FormsWorkspace({
                   className={secondaryButtonClassName}
                 >
                   Edit selected form
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void deleteForm(selectedForm)}
+                  disabled={isDeletingFormId === selectedForm.id}
+                  className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDeletingFormId === selectedForm.id ? "Deleting..." : "Delete selected form"}
                 </button>
                 <Link href={`/forms/${selectedForm.slug}`} className={primaryButtonClassName}>
                   Open public form

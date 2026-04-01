@@ -15,6 +15,7 @@ import {
 import {
   createSupabaseForm,
   createSupabaseFormResponse,
+  deleteSupabaseForm,
   getSupabaseFormsStore,
   updateSupabaseForm,
 } from "@/lib/supabase/persistence";
@@ -247,6 +248,30 @@ export async function updateIntakeForm(formId: string, input: NewIntakeFormInput
   await writeStore(nextStore);
 
   return updatedForm;
+}
+
+export async function deleteIntakeForm(formId: string) {
+  const supabaseDeleted = await deleteSupabaseForm(formId);
+
+  if (supabaseDeleted) {
+    return supabaseDeleted;
+  }
+
+  const store = await readStore();
+  const existing = store.forms.find((form) => form.id === formId);
+
+  if (!existing) {
+    throw new Error("Form not found.");
+  }
+
+  const nextStore: FormsStore = {
+    forms: store.forms.filter((form) => form.id !== formId),
+    responses: store.responses.filter((response) => response.formId !== formId),
+  };
+
+  await writeStore(nextStore);
+
+  return { id: formId };
 }
 
 export async function createFormResponse(
