@@ -133,31 +133,60 @@ export async function createManagedUser(input: {
     throw new Error("Supabase service role key is required for user management.");
   }
 
+  const normalizedEmail = input.email.trim().toLowerCase();
   const nextPassword = input.password?.trim() || DEFAULT_FIRST_LOGIN_PASSWORD;
-  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-    email: input.email,
-    password: nextPassword,
-    email_confirm: true,
-    user_metadata: {
-      must_reset_password: true,
-    },
-  });
+  const existingAuthUser = await findAuthUserByEmail(normalizedEmail);
+  const existingProfile = await findProfileByEmail(normalizedEmail);
 
-  if (authError || !authUser.user) {
-    throw new Error(authError?.message ?? "User creation failed.");
+  let authUserId = existingAuthUser?.id ?? "";
+
+  if (existingAuthUser) {
+    const { error: authUpdateError } = await supabase.auth.admin.updateUserById(existingAuthUser.id, {
+      email: normalizedEmail,
+      password: nextPassword,
+      user_metadata: {
+        ...(existingAuthUser.user_metadata ?? {}),
+        must_reset_password: true,
+      },
+    });
+
+    if (authUpdateError) {
+      throw new Error(authUpdateError.message);
+    }
+  } else {
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: nextPassword,
+      email_confirm: true,
+      user_metadata: {
+        must_reset_password: true,
+      },
+    });
+
+    if (authError || !authUser.user) {
+      throw new Error(authError?.message ?? "User creation failed.");
+    }
+
+    authUserId = authUser.user.id;
   }
 
-  const profileId = `${input.role}-${crypto.randomUUID()}`;
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const profileId = String(existingProfile?.id ?? `${input.role}-${crypto.randomUUID()}`);
+  const profilePayload = {
     id: profileId,
     full_name: input.fullName,
-    email: input.email,
+    email: normalizedEmail,
     phone: input.phone ?? "",
     role: input.role,
     fitness_goal: input.fitnessGoal ?? "",
     branch: input.branch ?? "",
-    joined_on: new Date().toISOString().slice(0, 10),
-  });
+    joined_on: existingProfile?.joined_on ?? new Date().toISOString().slice(0, 10),
+  };
+
+  const profileOperation = existingProfile
+    ? supabase.from("profiles").update(profilePayload).eq("id", profileId)
+    : supabase.from("profiles").insert(profilePayload);
+
+  const { error: profileError } = await profileOperation;
 
   if (profileError) {
     throw new Error(profileError.message);
@@ -165,7 +194,8 @@ export async function createManagedUser(input: {
 
   return {
     id: profileId,
-    email: input.email,
+    authUserId,
+    email: normalizedEmail,
     role: input.role,
   };
 }
@@ -283,6 +313,20 @@ export async function updateManagedUser(input: {
 
     if (authError) {
       throw new Error(authError.message);
+    }
+  } else {
+    const nextPassword = input.password?.trim() || DEFAULT_FIRST_LOGIN_PASSWORD;
+    const { data: createdAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+      email: input.email,
+      password: nextPassword,
+      email_confirm: true,
+      user_metadata: {
+        must_reset_password: true,
+      },
+    });
+
+    if (createAuthError || !createdAuthUser.user) {
+      throw new Error(createAuthError?.message ?? "User login account could not be created.");
     }
   }
 
