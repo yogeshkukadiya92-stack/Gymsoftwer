@@ -12,18 +12,68 @@ import {
   FilterToolbarSearch,
   secondaryButtonClassName,
   primaryButtonClassName,
+  textareaClassName,
   tableBodyCellClassName,
   tableClassName,
   tableHeaderCellClassName,
   tableRowClassName,
   tableShellClassName,
 } from "@/components/filter-toolbar";
-import { IntakeForm, IntakeFormResponse, NewIntakeFormInput } from "@/lib/forms";
+import {
+  fieldTypeDefinitions,
+  fieldTypeNeedsOptions,
+  IntakeForm,
+  IntakeFormField,
+  IntakeFormResponse,
+  NewIntakeFormInput,
+} from "@/lib/forms";
 
 type FormResponsesWorkspaceProps = {
   forms: IntakeForm[];
   responses: IntakeFormResponse[];
 };
+
+type EditorField = IntakeFormField & {
+  optionsText?: string;
+};
+
+function toEditorField(field: IntakeFormField): EditorField {
+  return {
+    ...field,
+    optionsText: field.options?.join(", ") ?? "",
+  };
+}
+
+function toSavedField(field: EditorField): IntakeFormField {
+  return {
+    id: field.id,
+    label: field.label.trim() || "Untitled question",
+    type: field.type,
+    required: field.required,
+    options: fieldTypeNeedsOptions(field.type)
+      ? (field.optionsText ?? "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : undefined,
+    condition: field.condition,
+    scaleMin: field.scaleMin,
+    scaleMax: field.scaleMax,
+    scaleLowLabel: field.scaleLowLabel,
+    scaleHighLabel: field.scaleHighLabel,
+  };
+}
+
+function makeEditorField(): EditorField {
+  return {
+    id: `field-${crypto.randomUUID()}`,
+    label: "",
+    type: "short_text",
+    required: true,
+    options: [],
+    optionsText: "",
+  };
+}
 
 export function FormResponsesWorkspace({
   forms,
@@ -44,6 +94,15 @@ export function FormResponsesWorkspace({
   const [isCreating, setIsCreating] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditingInline, setIsEditingInline] = useState(false);
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  const [inlineForm, setInlineForm] = useState<NewIntakeFormInput>({
+    title: "",
+    description: "",
+    audience: "",
+    fields: [],
+  });
+  const [inlineFields, setInlineFields] = useState<EditorField[]>([]);
 
   const selectedForm =
     formsState.find((form) => form.id === selectedFormId) ?? formsState[0];
@@ -86,6 +145,70 @@ export function FormResponsesWorkspace({
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
     return `/api/admin/form-responses/export?${params.toString()}`;
   })();
+
+  function openInlineEditor() {
+    if (!selectedForm) {
+      return;
+    }
+
+    setInlineForm({
+      title: selectedForm.title,
+      description: selectedForm.description,
+      audience: selectedForm.audience,
+      fields: selectedForm.fields,
+    });
+    setInlineFields(selectedForm.fields.map(toEditorField));
+    setCreateMessage("");
+    setIsEditingInline(true);
+  }
+
+  function syncInlineFields(nextFields: EditorField[]) {
+    setInlineFields(nextFields);
+    setInlineForm((current) => ({
+      ...current,
+      fields: nextFields.map(toSavedField),
+    }));
+  }
+
+  async function saveInlineForm() {
+    if (!selectedForm || !inlineForm.title.trim()) {
+      return;
+    }
+
+    setIsSavingInline(true);
+    setCreateMessage("");
+
+    const response = await fetch("/api/admin/forms", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: selectedForm.id,
+        ...inlineForm,
+        fields: inlineFields.map(toSavedField),
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      message?: string;
+      form?: IntakeForm;
+    };
+
+    if (response.ok && payload.form) {
+      setFormsState((current) =>
+        current.map((form) => (form.id === payload.form!.id ? payload.form! : form)),
+      );
+      setSelectedFormId(payload.form.id);
+      setCreateMessage(payload.message ?? "Form updated successfully.");
+      setIsEditingInline(false);
+    } else {
+      setCreateMessage(payload.error ?? "Form update failed.");
+    }
+
+    setIsSavingInline(false);
+  }
 
   async function handleDeleteSelectedForm() {
     if (!selectedForm) {
@@ -270,6 +393,13 @@ export function FormResponsesWorkspace({
               <Link href="/admin/forms" className={primaryButtonClassName}>
                 Open form editor
               </Link>
+              <button
+                type="button"
+                onClick={openInlineEditor}
+                className={secondaryButtonClassName}
+              >
+                Inline edit form
+              </button>
               <a
                 href={`/forms/${selectedForm.slug}`}
                 target="_blank"
@@ -366,6 +496,183 @@ export function FormResponsesWorkspace({
             </div>
           </div>
         </div>
+
+        {isEditingInline ? (
+          <div className="rounded-[2rem] border border-orange-200 bg-orange-50/70 p-6 shadow-[0_24px_80px_rgba(249,115,22,0.10)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+                  Inline editor
+                </p>
+                <h3 className="mt-2 font-serif text-2xl text-slate-950">
+                  Edit selected form here
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingInline(false)}
+                className={secondaryButtonClassName}
+              >
+                Close editor
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <input
+                value={inlineForm.title}
+                onChange={(event) =>
+                  setInlineForm((current) => ({ ...current, title: event.target.value }))
+                }
+                className={fieldClassName}
+                placeholder="Form title"
+              />
+              <textarea
+                value={inlineForm.description}
+                onChange={(event) =>
+                  setInlineForm((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                className={textareaClassName}
+                placeholder="Description"
+              />
+              <input
+                value={inlineForm.audience}
+                onChange={(event) =>
+                  setInlineForm((current) => ({ ...current, audience: event.target.value }))
+                }
+                className={fieldClassName}
+                placeholder="Audience"
+              />
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Questions
+                </p>
+                <button
+                  type="button"
+                  onClick={() => syncInlineFields([...inlineFields, makeEditorField()])}
+                  className={secondaryButtonClassName}
+                >
+                  Add question
+                </button>
+              </div>
+
+              {inlineFields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-white p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-950">Question {index + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        syncInlineFields(inlineFields.filter((item) => item.id !== field.id))
+                      }
+                      className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <input
+                      value={field.label}
+                      onChange={(event) =>
+                        syncInlineFields(
+                          inlineFields.map((item) =>
+                            item.id === field.id ? { ...item, label: event.target.value } : item,
+                          ),
+                        )
+                      }
+                      className={fieldClassName}
+                      placeholder="Question label"
+                    />
+                    <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                      <select
+                        value={field.type}
+                        onChange={(event) =>
+                          syncInlineFields(
+                            inlineFields.map((item) =>
+                              item.id === field.id
+                                ? {
+                                    ...item,
+                                    type: event.target.value as IntakeFormField["type"],
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                        className={fieldClassName}
+                      >
+                        {fieldTypeDefinitions.map((definition) => (
+                          <option key={definition.type} value={definition.type}>
+                            {definition.label}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(event) =>
+                            syncInlineFields(
+                              inlineFields.map((item) =>
+                                item.id === field.id
+                                  ? { ...item, required: event.target.checked }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                        Required
+                      </label>
+                    </div>
+
+                    {fieldTypeNeedsOptions(field.type) ? (
+                      <input
+                        value={field.optionsText ?? ""}
+                        onChange={(event) =>
+                          syncInlineFields(
+                            inlineFields.map((item) =>
+                              item.id === field.id
+                                ? { ...item, optionsText: event.target.value }
+                                : item,
+                            ),
+                          )
+                        }
+                        className={fieldClassName}
+                        placeholder="Enter options separated by commas"
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void saveInlineForm()}
+                disabled={isSavingInline}
+                className={primaryButtonClassName}
+              >
+                {isSavingInline ? "Saving..." : "Save changes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditingInline(false)}
+                className={secondaryButtonClassName}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className={tableShellClassName}>
           <div className="border-b border-slate-200 px-6 py-5">
