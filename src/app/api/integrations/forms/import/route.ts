@@ -33,6 +33,51 @@ function normalizeAnswerValue(value: unknown): string {
   return String(value);
 }
 
+function normalizeTallyPayload(body: Record<string, unknown>) {
+  const data =
+    body.data && typeof body.data === "object"
+      ? (body.data as Record<string, unknown>)
+      : undefined;
+  const fields = Array.isArray(data?.fields) ? data.fields : [];
+
+  const answers = Object.fromEntries(
+    fields
+      .map((field) => {
+        if (!field || typeof field !== "object") {
+          return null;
+        }
+
+        const record = field as Record<string, unknown>;
+        const label = String(record.label ?? record.key ?? "").trim();
+        const rawValue =
+          record.value ??
+          (record.answer && typeof record.answer === "object"
+            ? (record.answer as Record<string, unknown>).value
+            : undefined);
+
+        if (!label) {
+          return null;
+        }
+
+        return [label, normalizeAnswerValue(rawValue)];
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry)),
+  );
+
+  return {
+    source: "tally",
+    form: {
+      id: String(data?.formId ?? body.formId ?? "").trim(),
+      title: String(data?.formName ?? body.formName ?? "Tally form").trim(),
+      description: "Imported from Tally webhook",
+      audience: "External leads",
+    },
+    response: {
+      answers,
+    },
+  };
+}
+
 function normalizeAnswers(rawAnswers: Record<string, unknown> | undefined) {
   return Object.fromEntries(
     Object.entries(rawAnswers ?? {}).map(([key, value]) => [key, normalizeAnswerValue(value)]),
@@ -62,7 +107,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json()) as {
+  const rawBody = (await request.json()) as Record<string, unknown>;
+  const tallyLikePayload =
+    Boolean(rawBody.data && typeof rawBody.data === "object") &&
+    Array.isArray((rawBody.data as Record<string, unknown>).fields);
+  const body = (tallyLikePayload ? normalizeTallyPayload(rawBody) : rawBody) as {
     source?: string;
     form?: {
       id?: string;
