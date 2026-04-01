@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
@@ -10,6 +11,7 @@ import {
   FilterToolbarItem,
   FilterToolbarSearch,
   secondaryButtonClassName,
+  primaryButtonClassName,
   tableBodyCellClassName,
   tableClassName,
   tableHeaderCellClassName,
@@ -28,6 +30,7 @@ export function FormResponsesWorkspace({
   responses,
 }: FormResponsesWorkspaceProps) {
   const [formsState, setFormsState] = useState(forms);
+  const [responsesState, setResponsesState] = useState(responses);
   const [selectedFormId, setSelectedFormId] = useState(forms[0]?.id ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -40,11 +43,12 @@ export function FormResponsesWorkspace({
   });
   const [isCreating, setIsCreating] = useState(false);
   const [createMessage, setCreateMessage] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const selectedForm =
     formsState.find((form) => form.id === selectedFormId) ?? formsState[0];
   const selectedResponses = useMemo(() => {
-    const formResponses = responses.filter((response) => response.formId === selectedForm?.id);
+    const formResponses = responsesState.filter((response) => response.formId === selectedForm?.id);
 
     return formResponses.filter((response) => {
       const [datePart = "", timePart = ""] = response.submittedAt.split(" ");
@@ -61,7 +65,7 @@ export function FormResponsesWorkspace({
 
       return matchesDate && matchesFromTime && matchesToTime && matchesSearch;
     });
-  }, [responses, searchQuery, selectedForm, selectedDate, fromTime, toTime]);
+  }, [responsesState, searchQuery, selectedForm, selectedDate, fromTime, toTime]);
 
   const columns = selectedForm
     ? [
@@ -83,6 +87,47 @@ export function FormResponsesWorkspace({
     return `/api/admin/form-responses/export?${params.toString()}`;
   })();
 
+  async function handleDeleteSelectedForm() {
+    if (!selectedForm) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${selectedForm.title}"? This will also remove its saved responses from the app.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setCreateMessage("");
+
+    const response = await fetch("/api/admin/forms", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: selectedForm.id }),
+    });
+
+    const payload = (await response.json()) as { message?: string; error?: string };
+
+    if (response.ok) {
+      const nextForms = formsState.filter((form) => form.id !== selectedForm.id);
+      setFormsState(nextForms);
+      setResponsesState((current) =>
+        current.filter((item) => item.formId !== selectedForm.id),
+      );
+      setSelectedFormId(nextForms[0]?.id ?? "");
+      setCreateMessage(payload.message ?? "Form deleted successfully.");
+    } else {
+      setCreateMessage(payload.error ?? "Form delete failed.");
+    }
+
+    setIsDeleting(false);
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
@@ -94,7 +139,7 @@ export function FormResponsesWorkspace({
         </h2>
         <div className="mt-5 grid gap-3">
           {formsState.map((form) => {
-            const count = responses.filter((response) => response.formId === form.id).length;
+            const count = responsesState.filter((response) => response.formId === form.id).length;
 
             return (
               <button
@@ -218,8 +263,31 @@ export function FormResponsesWorkspace({
             {selectedForm?.title ?? "No form selected"}
           </h2>
           <p className="mt-2 text-slate-600">
-            Google Form jeva raw responses niche table format ma dekhashe.
+            Raw responses for the selected form appear below in a table layout.
           </p>
+          {selectedForm ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/admin/forms" className={primaryButtonClassName}>
+                Open form editor
+              </Link>
+              <a
+                href={`/forms/${selectedForm.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className={secondaryButtonClassName}
+              >
+                Open public form
+              </a>
+              <button
+                type="button"
+                onClick={() => void handleDeleteSelectedForm()}
+                disabled={isDeleting}
+                className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting..." : "Delete selected form"}
+              </button>
+            </div>
+          ) : null}
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
               <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Responses</p>
