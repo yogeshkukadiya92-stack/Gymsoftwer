@@ -75,6 +75,23 @@ function makeEditorField(): EditorField {
   };
 }
 
+function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length ||
+    fromIndex === toIndex
+  ) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [item] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, item);
+  return nextItems;
+}
+
 export function FormResponsesWorkspace({
   forms,
   responses,
@@ -96,6 +113,7 @@ export function FormResponsesWorkspace({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [isSavingInline, setIsSavingInline] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [inlineForm, setInlineForm] = useState<NewIntakeFormInput>({
     title: "",
     description: "",
@@ -145,6 +163,12 @@ export function FormResponsesWorkspace({
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
     return `/api/admin/form-responses/export?${params.toString()}`;
   })();
+  const selectedFormShareUrl =
+    selectedForm && typeof window !== "undefined"
+      ? `${window.location.origin}/forms/${selectedForm.slug}`
+      : selectedForm
+        ? `/forms/${selectedForm.slug}`
+        : "";
 
   function openInlineEditor() {
     if (!selectedForm) {
@@ -208,6 +232,58 @@ export function FormResponsesWorkspace({
     }
 
     setIsSavingInline(false);
+  }
+
+  async function copyPublicLink() {
+    if (!selectedFormShareUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(selectedFormShareUrl);
+      setCreateMessage("Public form link copied successfully.");
+    } catch {
+      setCreateMessage(selectedFormShareUrl);
+    }
+  }
+
+  async function duplicateSelectedForm() {
+    if (!selectedForm) {
+      return;
+    }
+
+    setIsDuplicating(true);
+    setCreateMessage("");
+
+    const response = await fetch("/api/admin/forms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: `${selectedForm.title} Copy`,
+        description: selectedForm.description,
+        audience: selectedForm.audience,
+        fields: selectedForm.fields,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      form?: IntakeForm;
+      sharePath?: string;
+      message?: string;
+    };
+
+    if (response.ok && payload.form) {
+      setFormsState((current) => [payload.form!, ...current]);
+      setSelectedFormId(payload.form.id);
+      setCreateMessage(payload.message ?? "Form duplicated successfully.");
+    } else {
+      setCreateMessage(payload.error ?? "Form duplicate failed.");
+    }
+
+    setIsDuplicating(false);
   }
 
   async function handleDeleteSelectedForm() {
@@ -400,6 +476,21 @@ export function FormResponsesWorkspace({
               >
                 Inline edit form
               </button>
+              <button
+                type="button"
+                onClick={() => void duplicateSelectedForm()}
+                disabled={isDuplicating}
+                className={secondaryButtonClassName}
+              >
+                {isDuplicating ? "Duplicating..." : "Duplicate form"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyPublicLink()}
+                className={secondaryButtonClassName}
+              >
+                Copy public link
+              </button>
               <a
                 href={`/forms/${selectedForm.slug}`}
                 target="_blank"
@@ -568,15 +659,37 @@ export function FormResponsesWorkspace({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-semibold text-slate-950">Question {index + 1}</p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        syncInlineFields(inlineFields.filter((item) => item.id !== field.id))
-                      }
-                      className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() =>
+                          syncInlineFields(moveItem(inlineFields, index, index - 1))
+                        }
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Move up
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === inlineFields.length - 1}
+                        onClick={() =>
+                          syncInlineFields(moveItem(inlineFields, index, index + 1))
+                        }
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700 transition hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Move down
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          syncInlineFields(inlineFields.filter((item) => item.id !== field.id))
+                        }
+                        className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-4 grid gap-4">
