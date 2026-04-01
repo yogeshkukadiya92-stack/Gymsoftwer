@@ -37,6 +37,7 @@ NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=progress-photos
+APP_URL=https://your-live-domain.com
 ```
 
 3. Apply the schema in [supabase/schema.sql](/C:/Users/yoges/Documents/TCH%20softwer/gym-webapp/supabase/schema.sql)
@@ -57,3 +58,5 @@ npm run build
 ## Deployment
 
 Deploy on Railway or Vercel and add the same Supabase environment variables in the project settings. Once those variables are present, the app will try to read and write live data instead of demo or file-based data.
+
+Set `APP_URL` to your live deployed URL so password reset and auth callback links open the correct domain instead of localhost.

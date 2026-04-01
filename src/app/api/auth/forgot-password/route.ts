@@ -1,4 +1,4 @@
-import { hasSupabaseEnv } from "@/lib/env";
+import { getAppBaseUrl, hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -21,9 +21,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "Supabase client unavailable." }, { status: 500 });
   }
 
-  const origin = new URL(request.url).origin;
+  const baseUrl = getAppBaseUrl(request.url);
   const { error } = await supabase.auth.resetPasswordForEmail(body.email.trim(), {
-    redirectTo: `${origin}/sign-in`,
+    redirectTo: `${baseUrl}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
