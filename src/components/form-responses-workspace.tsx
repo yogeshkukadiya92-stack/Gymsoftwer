@@ -115,6 +115,7 @@ export function FormResponsesWorkspace({
   const [isSavingInline, setIsSavingInline] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [draggingFieldId, setDraggingFieldId] = useState<string | null>(null);
+  const [creatingUserResponseId, setCreatingUserResponseId] = useState<string | null>(null);
   const [inlineForm, setInlineForm] = useState<NewIntakeFormInput>({
     title: "",
     description: "",
@@ -170,6 +171,26 @@ export function FormResponsesWorkspace({
       : selectedForm
         ? `/forms/${selectedForm.slug}`
         : "";
+
+  function getResponseFieldValue(
+    form: IntakeForm,
+    response: IntakeFormResponse,
+    options: { type?: IntakeFormField["type"]; labelPattern?: RegExp },
+  ) {
+    const field = form.fields.find((item) => {
+      if (options.type && item.type === options.type) {
+        return true;
+      }
+
+      if (options.labelPattern && options.labelPattern.test(item.label)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    return field ? response.answers[field.id] ?? "" : "";
+  }
 
   function openInlineEditor() {
     if (!selectedForm) {
@@ -337,6 +358,86 @@ export function FormResponsesWorkspace({
     }
 
     setIsDeleting(false);
+  }
+
+  async function handleCreateUserFromResponse(response: IntakeFormResponse) {
+    if (!selectedForm) {
+      return;
+    }
+
+    const fullName =
+      getResponseFieldValue(selectedForm, response, {
+        labelPattern: /full\s*name|name/i,
+      }) || "Form user";
+    const email = getResponseFieldValue(selectedForm, response, { type: "email" });
+    const phone = getResponseFieldValue(selectedForm, response, { type: "phone" });
+
+    if (!email.trim()) {
+      setCreateMessage("This response does not contain an email field, so a user cannot be created automatically.");
+      return;
+    }
+
+    setCreatingUserResponseId(response.id);
+    setCreateMessage("");
+
+    const createUserResponse = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fullName,
+        email,
+        phone,
+        role: "member",
+      }),
+    });
+
+    const createUserPayload = (await createUserResponse.json()) as {
+      error?: string;
+      message?: string;
+      user?: { id: string };
+    };
+
+    if (!createUserResponse.ok || !createUserPayload.user?.id) {
+      setCreateMessage(createUserPayload.error ?? "User create failed.");
+      setCreatingUserResponseId(null);
+      return;
+    }
+
+    const matchResponse = await fetch("/api/admin/form-responses/match", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        responseId: response.id,
+        memberId: createUserPayload.user.id,
+        respondentPhone: phone || response.respondentPhone || "",
+      }),
+    });
+
+    const matchPayload = (await matchResponse.json()) as { error?: string; message?: string };
+
+    if (!matchResponse.ok) {
+      setCreateMessage(matchPayload.error ?? "User created, but response match failed.");
+      setCreatingUserResponseId(null);
+      return;
+    }
+
+    setResponsesState((current) =>
+      current.map((item) =>
+        item.id === response.id
+          ? {
+              ...item,
+              memberId: createUserPayload.user!.id,
+              respondentPhone: phone || item.respondentPhone,
+            }
+          : item,
+      ),
+    );
+    setCreateMessage(createUserPayload.message ?? "User created successfully.");
+    setCreatingUserResponseId(null);
   }
 
   return (
@@ -867,6 +968,16 @@ export function FormResponsesWorkspace({
                             <span className="text-xs text-slate-500">
                               {response.respondentPhone || "No matching phone found"}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleCreateUserFromResponse(response)}
+                              disabled={creatingUserResponseId === response.id}
+                              className="mt-2 inline-flex w-fit items-center justify-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {creatingUserResponseId === response.id
+                                ? "Creating..."
+                                : "Create user"}
+                            </button>
                           </div>
                         )}
                       </td>

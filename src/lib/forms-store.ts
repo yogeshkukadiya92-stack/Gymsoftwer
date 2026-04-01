@@ -19,6 +19,7 @@ import {
   createSupabaseFormResponse,
   deleteSupabaseForm,
   getSupabaseFormsStore,
+  updateSupabaseFormResponseOwnership,
   updateSupabaseForm,
 } from "@/lib/supabase/persistence";
 
@@ -319,4 +320,47 @@ export async function createFormResponse(
   await writeStore(nextStore);
 
   return response;
+}
+
+export async function assignFormResponseToMember(input: {
+  responseId: string;
+  memberId: string;
+  respondentPhone?: string;
+}) {
+  const supabaseUpdated = await updateSupabaseFormResponseOwnership(input.responseId, {
+    memberId: input.memberId,
+    respondentPhone: input.respondentPhone,
+  });
+
+  if (supabaseUpdated) {
+    return supabaseUpdated;
+  }
+
+  const store = await readStore();
+  const existing = store.responses.find((response) => response.id === input.responseId);
+
+  if (!existing) {
+    throw new Error("Response not found.");
+  }
+
+  const nextStore: FormsStore = {
+    ...store,
+    responses: store.responses.map((response) =>
+      response.id === input.responseId
+        ? {
+            ...response,
+            memberId: input.memberId,
+            respondentPhone: input.respondentPhone ?? response.respondentPhone,
+          }
+        : response,
+    ),
+  };
+
+  await writeStore(nextStore);
+
+  return {
+    id: input.responseId,
+    memberId: input.memberId,
+    respondentPhone: input.respondentPhone,
+  };
 }

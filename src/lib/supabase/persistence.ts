@@ -941,6 +941,35 @@ export async function createSupabaseFormResponse(
   return response;
 }
 
+export async function updateSupabaseFormResponseOwnership(
+  responseId: string,
+  input: { memberId: string; respondentPhone?: string },
+) {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { error } = await supabase
+    .from("intake_form_responses")
+    .update({
+      member_id: input.memberId,
+      respondent_phone: input.respondentPhone ?? null,
+    })
+    .eq("id", responseId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    id: responseId,
+    memberId: input.memberId,
+    respondentPhone: input.respondentPhone,
+  };
+}
+
 export async function upsertSupabaseProfiles(members: Profile[]) {
   const supabase = await createSupabaseServerClient();
 
