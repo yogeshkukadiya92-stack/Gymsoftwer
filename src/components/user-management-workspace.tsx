@@ -59,6 +59,7 @@ export function UserManagementWorkspace({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
@@ -161,7 +162,7 @@ export function UserManagementWorkspace({
 
     if (!response.ok || !payload.users) {
       setStatusMessage(payload.error ?? "Users refresh failed.");
-      return;
+      return null;
     }
 
     setUsers(payload.users);
@@ -170,6 +171,33 @@ export function UserManagementWorkspace({
     if (!selectedUserId && payload.users.length > 0) {
       setSelectedUserId(payload.users[0].id);
     }
+
+    return payload;
+  }
+
+  async function handleVerifyLogin(user?: Profile) {
+    const targetUser = user ?? selectedUser;
+
+    if (!targetUser) {
+      return;
+    }
+
+    setIsVerifying(true);
+    setStatusMessage("");
+    const refreshedPayload = await refreshUsers();
+
+    const refreshedStatus =
+      refreshedPayload?.loginStatuses?.find((entry) => entry.userId === targetUser.id) ?? null;
+
+    if (!refreshedStatus?.loginReady) {
+      setStatusMessage(`Verification complete for ${targetUser.fullName}: login account is still not ready.`);
+    } else if (refreshedStatus.mustResetPassword) {
+      setStatusMessage(`Verification complete for ${targetUser.fullName}: user can sign in and will be asked to reset the password.`);
+    } else {
+      setStatusMessage(`Verification complete for ${targetUser.fullName}: user can sign in now.`);
+    }
+
+    setIsVerifying(false);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -447,13 +475,23 @@ export function UserManagementWorkspace({
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
             <p className={mutedStatusTextClassName}>{statusMessage}</p>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={primaryButtonClassName}
-            >
-              {isSubmitting ? "Saving..." : editingUserId ? "Save changes" : "Create user"}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => handleVerifyLogin()}
+                disabled={isVerifying || !selectedUser}
+                className={secondaryButtonClassName}
+              >
+                {isVerifying ? "Verifying..." : "Verify login"}
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={primaryButtonClassName}
+              >
+                {isSubmitting ? "Saving..." : editingUserId ? "Save changes" : "Create user"}
+              </button>
+            </div>
           </div>
         </form>
 
@@ -567,6 +605,17 @@ export function UserManagementWorkspace({
                   })()}
                 </div>
                 <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleVerifyLogin(user);
+                    }}
+                    disabled={isVerifying}
+                    className={secondaryButtonClassName}
+                  >
+                    {isVerifying && selectedUserId === user.id ? "Verifying..." : "Verify login"}
+                  </button>
                   <button
                     type="button"
                     onClick={(event) => {
