@@ -114,6 +114,7 @@ export function FormResponsesWorkspace({
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [isSavingInline, setIsSavingInline] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [draggingFieldId, setDraggingFieldId] = useState<string | null>(null);
   const [inlineForm, setInlineForm] = useState<NewIntakeFormInput>({
     title: "",
     description: "",
@@ -192,6 +193,17 @@ export function FormResponsesWorkspace({
       ...current,
       fields: nextFields.map(toSavedField),
     }));
+  }
+
+  function moveInlineFieldById(sourceId: string, targetId: string) {
+    const sourceIndex = inlineFields.findIndex((item) => item.id === sourceId);
+    const targetIndex = inlineFields.findIndex((item) => item.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    syncInlineFields(moveItem(inlineFields, sourceIndex, targetIndex));
   }
 
   async function saveInlineForm() {
@@ -655,10 +667,33 @@ export function FormResponsesWorkspace({
               {inlineFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="rounded-[1.5rem] border border-slate-200 bg-white p-4"
+                  draggable
+                  onDragStart={() => setDraggingFieldId(field.id)}
+                  onDragEnd={() => setDraggingFieldId(null)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                  }}
+                  onDrop={() => {
+                    if (!draggingFieldId || draggingFieldId === field.id) {
+                      return;
+                    }
+
+                    moveInlineFieldById(draggingFieldId, field.id);
+                    setDraggingFieldId(null);
+                  }}
+                  className={`rounded-[1.5rem] border bg-white p-4 ${
+                    draggingFieldId === field.id
+                      ? "border-orange-300 ring-2 ring-orange-100"
+                      : "border-slate-200"
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-slate-950">Question {index + 1}</p>
+                    <div>
+                      <p className="font-semibold text-slate-950">Question {index + 1}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
+                        Drag to reorder
+                      </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
