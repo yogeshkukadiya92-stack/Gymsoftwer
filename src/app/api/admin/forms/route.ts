@@ -6,6 +6,7 @@ export async function POST(request: Request) {
     title?: string;
     description?: string;
     audience?: string;
+    redirectUrl?: string;
     fields?: IntakeFormField[];
   };
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
     title: body.title,
     description: body.description ?? "",
     audience: body.audience ?? "",
+    redirectUrl: body.redirectUrl ?? "",
     fields: body.fields ?? [],
   });
 
@@ -33,6 +35,7 @@ export async function PUT(request: Request) {
     title?: string;
     description?: string;
     audience?: string;
+    redirectUrl?: string;
     fields?: IntakeFormField[];
   };
 
@@ -49,6 +52,7 @@ export async function PUT(request: Request) {
       title: body.title,
       description: body.description ?? "",
       audience: body.audience ?? "",
+      redirectUrl: body.redirectUrl ?? "",
       fields: body.fields ?? [],
     });
 

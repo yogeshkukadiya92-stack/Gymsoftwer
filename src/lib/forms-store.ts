@@ -126,6 +126,7 @@ export async function createOrUpdateExternalIntakeForm(input: {
   title: string;
   description?: string;
   audience?: string;
+  redirectUrl?: string;
   fields?: IntakeFormField[];
   seedAnswers?: Record<string, string>;
 }) {
@@ -150,6 +151,7 @@ export async function createOrUpdateExternalIntakeForm(input: {
       input.description?.trim() ||
       `Imported automatically from ${sourceDescription} submissions.`,
     audience: input.audience?.trim() || "External form submissions",
+    redirectUrl: input.redirectUrl?.trim() || "",
     fields,
   };
 
@@ -186,6 +188,7 @@ export async function createIntakeForm(input: NewIntakeFormInput) {
     description: input.description.trim() || "Collect information from clients.",
     audience: input.audience.trim() || "General clients",
     status: "Active",
+    redirectUrl: input.redirectUrl?.trim() || "",
     fields:
       input.fields && input.fields.length > 0
         ? input.fields
@@ -235,6 +238,7 @@ export async function updateIntakeForm(formId: string, input: NewIntakeFormInput
     title: input.title.trim() || existing.title,
     description: input.description.trim() || existing.description,
     audience: input.audience.trim() || existing.audience,
+    redirectUrl: input.redirectUrl?.trim() || existing.redirectUrl || "",
     fields:
       input.fields && input.fields.length > 0
         ? input.fields

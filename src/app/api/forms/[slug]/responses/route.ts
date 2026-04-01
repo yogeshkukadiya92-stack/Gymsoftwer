@@ -92,5 +92,6 @@ export async function POST(
 
   return Response.json({
     message: "Form submitted successfully.",
+    redirectUrl: form.redirectUrl ?? "",
   });
 }

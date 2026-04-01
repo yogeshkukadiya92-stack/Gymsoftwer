@@ -147,6 +147,7 @@ export type IntakeForm = {
   description: string;
   audience: string;
   status: "Active" | "Draft";
+  redirectUrl?: string;
   fields: IntakeFormField[];
 };
 
@@ -168,6 +169,7 @@ export type NewIntakeFormInput = {
   title: string;
   description: string;
   audience: string;
+  redirectUrl?: string;
   fields?: IntakeFormField[];
 };
 
@@ -179,6 +181,7 @@ export const starterForms: IntakeForm[] = [
     description: "Collect basic workshop joining details, goals, and contact info.",
     audience: "New clients",
     status: "Active",
+    redirectUrl: "",
     fields: [
       { id: "name", label: "Full name", type: "short_text", required: true },
       { id: "phone", label: "Phone number", type: "phone", required: true },
@@ -209,6 +212,7 @@ export const starterForms: IntakeForm[] = [
     description: "Take quick feedback after weekly online sessions.",
     audience: "Existing workshop clients",
     status: "Active",
+    redirectUrl: "",
     fields: [
       { id: "name", label: "Full name", type: "short_text", required: true },
       {

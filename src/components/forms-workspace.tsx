@@ -137,6 +137,7 @@ const initialFormState: NewIntakeFormInput = {
   title: "",
   description: "",
   audience: "",
+  redirectUrl: "",
   fields: initialFields,
 };
 
@@ -227,6 +228,7 @@ export function FormsWorkspace({
       title: form.title,
       description: form.description,
       audience: form.audience,
+      redirectUrl: form.redirectUrl ?? "",
       fields: form.fields,
     });
     setBuilderFields(form.fields.map(toBuilderField));
@@ -409,6 +411,17 @@ export function FormsWorkspace({
               }
               className={fieldClassName}
               placeholder="Audience"
+            />
+            <input
+              value={formState.redirectUrl ?? ""}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  redirectUrl: event.target.value,
+                }))
+              }
+              className={fieldClassName}
+              placeholder="Redirect URL after submit, example: https://zoom.us/j/123456789"
             />
           </div>
 

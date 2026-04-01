@@ -120,6 +120,7 @@ export function FormResponsesWorkspace({
     title: "",
     description: "",
     audience: "",
+    redirectUrl: "",
     fields: [],
   });
   const [inlineFields, setInlineFields] = useState<EditorField[]>([]);
@@ -201,6 +202,7 @@ export function FormResponsesWorkspace({
       title: selectedForm.title,
       description: selectedForm.description,
       audience: selectedForm.audience,
+      redirectUrl: selectedForm.redirectUrl ?? "",
       fields: selectedForm.fields,
     });
     setInlineFields(selectedForm.fields.map(toEditorField));
@@ -750,6 +752,17 @@ export function FormResponsesWorkspace({
                 }
                 className={fieldClassName}
                 placeholder="Audience"
+              />
+              <input
+                value={inlineForm.redirectUrl ?? ""}
+                onChange={(event) =>
+                  setInlineForm((current) => ({
+                    ...current,
+                    redirectUrl: event.target.value,
+                  }))
+                }
+                className={fieldClassName}
+                placeholder="Redirect URL after submit, example: https://zoom.us/j/123456789"
               />
             </div>
 

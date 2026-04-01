@@ -332,7 +332,7 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
       body: JSON.stringify({ answers: nextAnswers }),
     });
 
-    const payload = (await response.json()) as { error?: string };
+    const payload = (await response.json()) as { error?: string; redirectUrl?: string };
 
     if (!response.ok) {
       setSubmitError(payload.error ?? "Form submission failed.");
@@ -342,6 +342,10 @@ export function PublicIntakeForm({ form }: PublicIntakeFormProps) {
 
     setSubmitted(true);
     setIsSubmitting(false);
+    if (payload.redirectUrl?.trim()) {
+      window.location.href = payload.redirectUrl.trim();
+      return;
+    }
     router.refresh();
   }
 

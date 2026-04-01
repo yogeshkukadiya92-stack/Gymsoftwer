@@ -36,6 +36,7 @@ function mapFormRow(row: {
   description: string;
   audience: string;
   status: "Active" | "Draft";
+  redirect_url?: string | null;
   fields: IntakeFormField[];
 }): IntakeForm {
   return {
@@ -45,6 +46,7 @@ function mapFormRow(row: {
     description: row.description,
     audience: row.audience,
     status: row.status,
+    redirectUrl: row.redirect_url ?? "",
     fields: row.fields ?? [],
   };
 }
@@ -754,6 +756,7 @@ export async function getSupabaseFormsStore(): Promise<FormsStore | null> {
           description: string;
           audience: string;
           status: "Active" | "Draft";
+          redirect_url?: string | null;
           fields: IntakeFormField[];
         },
       ),
@@ -798,6 +801,7 @@ export async function createSupabaseForm(input: NewIntakeFormInput) {
     description: input.description.trim() || "Collect information from clients.",
     audience: input.audience.trim() || "General clients",
     status: "Active",
+    redirectUrl: input.redirectUrl?.trim() || "",
     fields:
       input.fields && input.fields.length > 0
         ? input.fields
@@ -811,6 +815,7 @@ export async function createSupabaseForm(input: NewIntakeFormInput) {
     description: form.description,
     audience: form.audience,
     status: form.status,
+    redirect_url: form.redirectUrl || null,
     fields: form.fields,
   });
 
@@ -860,6 +865,7 @@ export async function updateSupabaseForm(formId: string, input: NewIntakeFormInp
     description: input.description.trim() || existing.description,
     audience: input.audience.trim() || existing.audience,
     status: existing.status,
+    redirectUrl: input.redirectUrl?.trim() || existing.redirect_url || "",
     fields:
       input.fields && input.fields.length > 0
         ? input.fields
@@ -875,6 +881,7 @@ export async function updateSupabaseForm(formId: string, input: NewIntakeFormInp
       title: updatedForm.title,
       description: updatedForm.description,
       audience: updatedForm.audience,
+      redirect_url: updatedForm.redirectUrl || null,
       fields: updatedForm.fields,
     })
     .eq("id", formId);
