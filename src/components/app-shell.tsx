@@ -1,7 +1,4 @@
-import Link from "next/link";
-
 import { AppShellNav } from "@/components/app-shell-nav";
-import { Badge } from "@/components/badge";
 import { LogoutButton } from "@/components/logout-button";
 import { getAuthenticatedProfile } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
@@ -49,12 +46,11 @@ export async function AppShell({
         <div className="mx-auto grid max-w-7xl gap-5 px-6 py-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.28)]">
             <div className="space-y-4">
-              <Link href="/" className="inline-flex items-center gap-3">
+              <div className="inline-flex items-center gap-3">
                 <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-3 py-1 text-sm font-semibold tracking-[0.2em] text-orange-200">
                   {appConfig.name}
                 </span>
-                <Badge>{role} portal</Badge>
-              </Link>
+              </div>
               <div>
                 <h1 className="font-serif text-3xl tracking-tight text-white sm:text-[2.35rem]">
                   {title}
