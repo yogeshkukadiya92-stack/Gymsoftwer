@@ -1,5 +1,6 @@
 import { createFormResponse, getFormBySlug } from "@/lib/forms-store";
 import { IntakeFormField } from "@/lib/forms";
+import { isValidRedirectUrl } from "@/lib/redirect-url";
 
 function isFieldVisible(field: IntakeFormField, answers: Record<string, string>) {
   if (!field.condition) {
@@ -92,6 +93,6 @@ export async function POST(
 
   return Response.json({
     message: "Form submitted successfully.",
-    redirectUrl: form.redirectUrl ?? "",
+    redirectUrl: isValidRedirectUrl(form.redirectUrl ?? "") ? (form.redirectUrl ?? "") : "",
   });
 }

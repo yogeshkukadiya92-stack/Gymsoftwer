@@ -1,5 +1,6 @@
 import { IntakeFormField } from "@/lib/forms";
 import { createIntakeForm, deleteIntakeForm, updateIntakeForm } from "@/lib/forms-store";
+import { isValidRedirectUrl } from "@/lib/redirect-url";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -12,6 +13,13 @@ export async function POST(request: Request) {
 
   if (!body.title?.trim()) {
     return Response.json({ error: "Form title is required." }, { status: 400 });
+  }
+
+  if (!isValidRedirectUrl(body.redirectUrl ?? "")) {
+    return Response.json(
+      { error: "Redirect URL must be a valid http or https link." },
+      { status: 400 },
+    );
   }
 
   const form = await createIntakeForm({
@@ -45,6 +53,13 @@ export async function PUT(request: Request) {
 
   if (!body.title?.trim()) {
     return Response.json({ error: "Form title is required." }, { status: 400 });
+  }
+
+  if (!isValidRedirectUrl(body.redirectUrl ?? "")) {
+    return Response.json(
+      { error: "Redirect URL must be a valid http or https link." },
+      { status: 400 },
+    );
   }
 
   try {

@@ -355,6 +355,16 @@ function mapTrainerNoteRow(row: Record<string, unknown>): TrainerClientNote {
   };
 }
 
+function isMissingColumnError(message: string, columnName: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes(columnName.toLowerCase()) &&
+    (normalized.includes("column") ||
+      normalized.includes("schema cache") ||
+      normalized.includes("could not find"))
+  );
+}
+
 export async function readSupabaseAppData(): Promise<AppData | null> {
   const supabase = await createSupabaseServerClient();
 
@@ -808,16 +818,25 @@ export async function createSupabaseForm(input: NewIntakeFormInput) {
         : buildDefaultFormFields(input.title.trim() || "Client"),
   };
 
-  const { error } = await supabase.from("intake_forms").insert({
+  const basePayload = {
     id: form.id,
     slug: form.slug,
     title: form.title,
     description: form.description,
     audience: form.audience,
     status: form.status,
-    redirect_url: form.redirectUrl || null,
     fields: form.fields,
+  };
+
+  const firstAttempt = await supabase.from("intake_forms").insert({
+    ...basePayload,
+    redirect_url: form.redirectUrl || null,
   });
+
+  const error =
+    firstAttempt.error && isMissingColumnError(firstAttempt.error.message, "redirect_url")
+      ? (await supabase.from("intake_forms").insert(basePayload)).error
+      : firstAttempt.error;
 
   if (error) {
     throw new Error(error.message);
@@ -874,17 +893,31 @@ export async function updateSupabaseForm(formId: string, input: NewIntakeFormInp
           : buildDefaultFormFields(input.title.trim() || existing.title),
   };
 
-  const { error } = await supabase
+  const basePayload = {
+    slug: updatedForm.slug,
+    title: updatedForm.title,
+    description: updatedForm.description,
+    audience: updatedForm.audience,
+    fields: updatedForm.fields,
+  };
+
+  const firstAttempt = await supabase
     .from("intake_forms")
     .update({
-      slug: updatedForm.slug,
-      title: updatedForm.title,
-      description: updatedForm.description,
-      audience: updatedForm.audience,
+      ...basePayload,
       redirect_url: updatedForm.redirectUrl || null,
-      fields: updatedForm.fields,
     })
     .eq("id", formId);
+
+  const error =
+    firstAttempt.error && isMissingColumnError(firstAttempt.error.message, "redirect_url")
+      ? (
+          await supabase
+            .from("intake_forms")
+            .update(basePayload)
+            .eq("id", formId)
+        ).error
+      : firstAttempt.error;
 
   if (error) {
     throw new Error(error.message);
@@ -932,14 +965,28 @@ export async function createSupabaseFormResponse(
     respondentPhone: ownership?.respondentPhone,
   };
 
-  const { error } = await supabase.from("intake_form_responses").insert({
+  const basePayload = {
     id: response.id,
     form_id: response.formId,
     submitted_at: response.submittedAt.replace(" ", "T"),
     answers: response.answers,
+  };
+
+  const firstAttempt = await supabase.from("intake_form_responses").insert({
+    ...basePayload,
     member_id: response.memberId ?? null,
     respondent_phone: response.respondentPhone ?? null,
   });
+
+  let error = firstAttempt.error;
+
+  if (
+    error &&
+    (isMissingColumnError(error.message, "member_id") ||
+      isMissingColumnError(error.message, "respondent_phone"))
+  ) {
+    error = (await supabase.from("intake_form_responses").insert(basePayload)).error;
+  }
 
   if (error) {
     throw new Error(error.message);
@@ -958,13 +1005,27 @@ export async function updateSupabaseFormResponseOwnership(
     return null;
   }
 
-  const { error } = await supabase
+  const firstAttempt = await supabase
     .from("intake_form_responses")
     .update({
       member_id: input.memberId,
       respondent_phone: input.respondentPhone ?? null,
     })
     .eq("id", responseId);
+
+  if (
+    firstAttempt.error &&
+    (isMissingColumnError(firstAttempt.error.message, "member_id") ||
+      isMissingColumnError(firstAttempt.error.message, "respondent_phone"))
+  ) {
+    return {
+      id: responseId,
+      memberId: input.memberId,
+      respondentPhone: input.respondentPhone,
+    };
+  }
+
+  const error = firstAttempt.error;
 
   if (error) {
     throw new Error(error.message);
