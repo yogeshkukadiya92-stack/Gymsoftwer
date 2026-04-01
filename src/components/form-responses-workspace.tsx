@@ -527,8 +527,10 @@ export function FormResponsesWorkspace({
               <p className="mt-3 text-3xl font-semibold">{selectedResponses.length}</p>
             </div>
             <div className="rounded-[1.5rem] bg-slate-50 p-4 text-slate-900">
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Columns</p>
-              <p className="mt-3 text-3xl font-semibold">{columns.length}</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Matched users</p>
+              <p className="mt-3 text-3xl font-semibold">
+                {selectedResponses.filter((response) => response.memberId).length}
+              </p>
             </div>
             <div className="rounded-[1.5rem] bg-orange-50 p-4 text-orange-900">
               <p className="text-sm uppercase tracking-[0.24em] text-orange-600">Audience</p>
@@ -836,6 +838,7 @@ export function FormResponsesWorkspace({
               <table className={tableClassName}>
                 <thead>
                   <tr>
+                    <th className={tableHeaderCellClassName}>Match status</th>
                     {columns.map((column) => (
                       <th key={column.id} className={tableHeaderCellClassName}>
                         {column.label}
@@ -846,6 +849,27 @@ export function FormResponsesWorkspace({
                 <tbody>
                   {selectedResponses.map((response) => (
                     <tr key={response.id} className={tableRowClassName}>
+                      <td className={tableBodyCellClassName}>
+                        {response.memberId ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                              Matched to user
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {response.respondentPhone || "Phone matched"}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex w-fit items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                              Unmatched response
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {response.respondentPhone || "No matching phone found"}
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       {columns.map((column) => (
                         <td key={`${response.id}-${column.id}`} className={tableBodyCellClassName}>
                           {column.id === "submittedAt"
