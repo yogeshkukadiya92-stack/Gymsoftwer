@@ -176,7 +176,51 @@ export function IntegrationKeysWorkspace({
             </p>
             <div className="mt-4 rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-700">
               <p>Use this header: `x-api-key: YOUR_KEY`</p>
-              <p className="mt-2">Athva: `Authorization: Bearer YOUR_KEY`</p>
+              <p className="mt-2">Or: `Authorization: Bearer YOUR_KEY`</p>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+            <h3 className="font-serif text-2xl text-slate-950">
+              Tally and Google Forms import
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Send external form submissions directly into GymFlow so they appear in
+              `Form responses`.
+            </p>
+            <div className="mt-4 rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">
+                `POST /api/integrations/forms/import`
+              </p>
+              <p className="mt-2">
+                Friendly aliases: `POST /api/integrations/forms/tally` and `POST
+                /api/integrations/forms/google`
+              </p>
+              <p className="mt-2">Required API key scope: `forms` or `formResponses`</p>
+              <p className="mt-2">Sample JSON payload:</p>
+              <pre className="mt-3 overflow-x-auto rounded-2xl bg-slate-950/95 p-4 text-xs text-slate-100">
+{`{
+  "source": "tally",
+  "form": {
+    "id": "tally-form-001",
+    "title": "Workshop Registration",
+    "description": "Imported from Tally submissions",
+    "audience": "External leads"
+  },
+  "response": {
+    "answers": {
+      "Full name": "Riya Patel",
+      "Phone": "+91 9876543210",
+      "Email": "riya@example.com",
+      "Goal": "Weight loss"
+    }
+  }
+}`}
+              </pre>
+              <p className="mt-3">
+                The system will create the form if it does not exist and store the
+                imported response automatically.
+              </p>
             </div>
           </div>
 

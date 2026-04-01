@@ -1,5 +1,6 @@
 import { getBusinessStore } from "@/lib/business-data-store";
 import { getAppData } from "@/lib/data";
+import { getAllForms, getAllFormResponses } from "@/lib/forms-store";
 import { integrationDatasets, type IntegrationDataset } from "@/lib/integrations";
 import { validateIntegrationApiKey } from "@/lib/integrations-store";
 
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
   const allowedDatasets = datasets.filter((dataset) => apiKey.scopes.includes(dataset));
   const appData = await getAppData();
   const businessStore = await getBusinessStore();
+  const [forms, formResponses] = await Promise.all([getAllForms(), getAllFormResponses()]);
 
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -62,6 +64,12 @@ export async function GET(request: Request) {
         break;
       case "attendance":
         payload.datasets[dataset] = appData.attendance;
+        break;
+      case "forms":
+        payload.datasets[dataset] = forms;
+        break;
+      case "formResponses":
+        payload.datasets[dataset] = formResponses;
         break;
       case "inventoryItems":
         payload.datasets[dataset] = appData.inventoryItems;

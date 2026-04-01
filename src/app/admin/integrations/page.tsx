@@ -11,7 +11,7 @@ export default async function AdminIntegrationsPage() {
     <AppShell
       role="admin"
       title="Integrations"
-      subtitle="Generate API keys and securely connect app data to external systems."
+      subtitle="Generate API keys, export app data, and import Tally or Google Form responses into the app."
       navLinks={adminNavLinks}
     >
       <SectionCard eyebrow="API access" title="Integration keys">

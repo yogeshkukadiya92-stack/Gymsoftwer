@@ -5,6 +5,8 @@ export const integrationDatasets = [
   "memberships",
   "sessions",
   "attendance",
+  "forms",
+  "formResponses",
   "inventoryItems",
   "inventorySales",
   "workoutPlans",

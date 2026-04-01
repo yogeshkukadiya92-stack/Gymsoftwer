@@ -5,6 +5,7 @@ import {
   buildDefaultFormFields,
   FormsStore,
   IntakeForm,
+  IntakeFormField,
   IntakeFormResponse,
   NewIntakeFormInput,
   slugifyFormTitle,
@@ -65,6 +66,94 @@ export async function getAllFormResponses() {
 export async function getFormBySlug(slug: string) {
   const store = await getFormsStore();
   return store.forms.find((form) => form.slug === slug) ?? null;
+}
+
+export async function getFormById(formId: string) {
+  const store = await getFormsStore();
+  return store.forms.find((form) => form.id === formId) ?? null;
+}
+
+function sanitizeExternalFieldId(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function inferFieldTypeFromAnswer(value: string): IntakeFormField["type"] {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "short_text";
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return "email";
+  }
+
+  if (/^[+()\d\s-]{7,}$/.test(trimmed)) {
+    return "phone";
+  }
+
+  if (/^https?:\/\/.+/i.test(trimmed)) {
+    return "link";
+  }
+
+  if (!Number.isNaN(Number(trimmed))) {
+    return "number";
+  }
+
+  return trimmed.length > 80 ? "paragraph" : "short_text";
+}
+
+function buildExternalFieldsFromAnswers(answers: Record<string, string>) {
+  return Object.entries(answers).map(([label, value], index) => ({
+    id: sanitizeExternalFieldId(label) || `field_${index + 1}`,
+    label,
+    type: inferFieldTypeFromAnswer(value),
+    required: false,
+  })) satisfies IntakeFormField[];
+}
+
+export async function createOrUpdateExternalIntakeForm(input: {
+  source: string;
+  externalFormId?: string;
+  title: string;
+  description?: string;
+  audience?: string;
+  fields?: IntakeFormField[];
+  seedAnswers?: Record<string, string>;
+}) {
+  const store = await getFormsStore();
+  const sourceDescription = input.externalFormId
+    ? `${input.source} form ${input.externalFormId}`
+    : `${input.source} form`;
+  const existing = store.forms.find(
+    (form) =>
+      form.title.trim().toLowerCase() === input.title.trim().toLowerCase() ||
+      form.slug === slugifyFormTitle(input.title),
+  );
+  const fields =
+    input.fields && input.fields.length > 0
+      ? input.fields
+      : input.seedAnswers && Object.keys(input.seedAnswers).length > 0
+        ? buildExternalFieldsFromAnswers(input.seedAnswers)
+        : buildDefaultFormFields(input.title.trim() || "External form");
+  const normalizedInput: NewIntakeFormInput = {
+    title: input.title.trim() || "External form",
+    description:
+      input.description?.trim() ||
+      `Imported automatically from ${sourceDescription} submissions.`,
+    audience: input.audience?.trim() || "External form submissions",
+    fields,
+  };
+
+  if (existing) {
+    return updateIntakeForm(existing.id, normalizedInput);
+  }
+
+  return createIntakeForm(normalizedInput);
 }
 
 export async function createIntakeForm(input: NewIntakeFormInput) {
