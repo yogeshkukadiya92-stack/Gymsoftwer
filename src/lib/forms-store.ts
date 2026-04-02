@@ -284,6 +284,7 @@ export async function deleteIntakeForm(formId: string) {
 export async function createFormResponse(
   formId: string,
   answers: Record<string, string>,
+  metadata?: IntakeFormResponse["metadata"],
 ) {
   const store = await getFormsStore();
   const form = store.forms.find((item) => item.id === formId) ?? null;
@@ -301,7 +302,7 @@ export async function createFormResponse(
   const supabaseResponse = await createSupabaseFormResponse(formId, answers, {
     memberId: matchedProfile?.id,
     respondentPhone: respondentPhone || undefined,
-  });
+  }, metadata);
 
   if (supabaseResponse) {
     return supabaseResponse;
@@ -314,6 +315,7 @@ export async function createFormResponse(
     answers,
     memberId: matchedProfile?.id,
     respondentPhone: respondentPhone || undefined,
+    metadata,
   };
 
   const nextStore: FormsStore = {

@@ -1,4 +1,5 @@
 import { createFormResponse, getFormBySlug } from "@/lib/forms-store";
+import { buildFormResponseMetadata } from "@/lib/form-response-metadata";
 import { IntakeFormField } from "@/lib/forms";
 import { isValidRedirectUrl } from "@/lib/redirect-url";
 
@@ -89,7 +90,7 @@ export async function POST(
     );
   }
 
-  await createFormResponse(form.id, answers);
+  await createFormResponse(form.id, answers, buildFormResponseMetadata(request));
 
   return Response.json({
     message: "Form submitted successfully.",

@@ -158,6 +158,18 @@ export type IntakeFormResponse = {
   answers: Record<string, string>;
   memberId?: string;
   respondentPhone?: string;
+  metadata?: {
+    ipAddress?: string;
+    userAgent?: string;
+    browser?: string;
+    operatingSystem?: string;
+    deviceType?: string;
+    country?: string;
+    region?: string;
+    city?: string;
+    timezone?: string;
+    submittedFrom?: string;
+  };
 };
 
 export type FormsStore = {
@@ -244,6 +256,15 @@ export const starterResponses: IntakeFormResponse[] = [
     formId: "form-1",
     submittedAt: "2026-03-18 08:45",
     respondentPhone: "+91 98765 40000",
+    metadata: {
+      browser: "Chrome",
+      operatingSystem: "Android",
+      deviceType: "Mobile",
+      country: "India",
+      city: "Surat",
+      timezone: "Asia/Calcutta",
+      submittedFrom: "Surat, India",
+    },
     answers: {
       name: "Riya Sharma",
       phone: "+91 98765 40000",
@@ -257,6 +278,15 @@ export const starterResponses: IntakeFormResponse[] = [
     formId: "form-1",
     submittedAt: "2026-03-18 09:05",
     respondentPhone: "+91 98765 41111",
+    metadata: {
+      browser: "Safari",
+      operatingSystem: "iOS",
+      deviceType: "Mobile",
+      country: "India",
+      city: "Ahmedabad",
+      timezone: "Asia/Calcutta",
+      submittedFrom: "Ahmedabad, India",
+    },
     answers: {
       name: "Parth Mehta",
       phone: "+91 98765 41111",
@@ -269,6 +299,15 @@ export const starterResponses: IntakeFormResponse[] = [
     id: "response-3",
     formId: "form-2",
     submittedAt: "2026-03-18 10:15",
+    metadata: {
+      browser: "Chrome",
+      operatingSystem: "Windows",
+      deviceType: "Desktop",
+      country: "India",
+      city: "Rajkot",
+      timezone: "Asia/Calcutta",
+      submittedFrom: "Rajkot, India",
+    },
     answers: {
       name: "Diya Patel",
       favorite: "Fat Loss Mobility Flow",

@@ -103,6 +103,7 @@ export function FormResponsesWorkspace({
   const [selectedDate, setSelectedDate] = useState("");
   const [fromTime, setFromTime] = useState("");
   const [toTime, setToTime] = useState("");
+  const [selectedResponseId, setSelectedResponseId] = useState("");
   const [newForm, setNewForm] = useState<NewIntakeFormInput>({
     title: "",
     description: "",
@@ -146,6 +147,10 @@ export function FormResponsesWorkspace({
       return matchesDate && matchesFromTime && matchesToTime && matchesSearch;
     });
   }, [responsesState, searchQuery, selectedForm, selectedDate, fromTime, toTime]);
+  const selectedResponse =
+    selectedResponses.find((response) => response.id === selectedResponseId) ??
+    selectedResponses[0] ??
+    null;
 
   const columns = selectedForm
     ? [
@@ -640,6 +645,47 @@ export function FormResponsesWorkspace({
               <p className="mt-3 text-xl font-semibold">{selectedForm?.audience ?? "-"}</p>
             </div>
           </div>
+          {selectedResponse ? (
+            <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+                    Submission details
+                  </p>
+                  <h3 className="mt-2 font-serif text-xl text-slate-950">
+                    Response metadata for the selected submission
+                  </h3>
+                </div>
+                <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+                  {selectedResponse.submittedAt}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ["Device", selectedResponse.metadata?.deviceType || "-"],
+                  ["Browser", selectedResponse.metadata?.browser || "-"],
+                  ["Operating system", selectedResponse.metadata?.operatingSystem || "-"],
+                  ["Timezone", selectedResponse.metadata?.timezone || "-"],
+                  ["Location", selectedResponse.metadata?.submittedFrom || "-"],
+                  ["Country", selectedResponse.metadata?.country || "-"],
+                  ["City", selectedResponse.metadata?.city || "-"],
+                  ["IP address", selectedResponse.metadata?.ipAddress || "-"],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      {label}
+                    </p>
+                    <p className="mt-2 break-all text-sm font-medium text-slate-900">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-5 space-y-4">
             <FilterToolbar>
               <FilterToolbarItem className="min-w-[16rem] flex-[1.6]">
@@ -962,7 +1008,13 @@ export function FormResponsesWorkspace({
                 </thead>
                 <tbody>
                   {selectedResponses.map((response) => (
-                    <tr key={response.id} className={tableRowClassName}>
+                    <tr
+                      key={response.id}
+                      className={`${tableRowClassName} cursor-pointer ${
+                        selectedResponse?.id === response.id ? "bg-orange-50/60" : ""
+                      }`}
+                      onClick={() => setSelectedResponseId(response.id)}
+                    >
                       <td className={tableBodyCellClassName}>
                         {response.memberId ? (
                           <div className="flex flex-col gap-1">

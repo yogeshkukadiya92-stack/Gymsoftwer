@@ -256,6 +256,7 @@ function mapResponseRow(row: {
   answers: Record<string, string>;
   member_id?: string | null;
   respondent_phone?: string | null;
+  metadata?: IntakeFormResponse["metadata"] | null;
 }): IntakeFormResponse {
   return {
     id: row.id,
@@ -264,6 +265,7 @@ function mapResponseRow(row: {
     answers: row.answers ?? {},
     memberId: row.member_id ?? undefined,
     respondentPhone: row.respondent_phone ?? undefined,
+    metadata: row.metadata ?? undefined,
   };
 }
 
@@ -780,6 +782,7 @@ export async function getSupabaseFormsStore(): Promise<FormsStore | null> {
           answers: Record<string, string>;
           member_id?: string | null;
           respondent_phone?: string | null;
+          metadata?: IntakeFormResponse["metadata"] | null;
         },
       ),
     ),
@@ -949,6 +952,7 @@ export async function createSupabaseFormResponse(
     memberId?: string;
     respondentPhone?: string;
   },
+  metadata?: IntakeFormResponse["metadata"],
 ) {
   const supabase = await createSupabaseServerClient();
 
@@ -963,6 +967,7 @@ export async function createSupabaseFormResponse(
     answers,
     memberId: ownership?.memberId,
     respondentPhone: ownership?.respondentPhone,
+    metadata,
   };
 
   const basePayload = {
@@ -976,6 +981,7 @@ export async function createSupabaseFormResponse(
     ...basePayload,
     member_id: response.memberId ?? null,
     respondent_phone: response.respondentPhone ?? null,
+    metadata: response.metadata ?? null,
   });
 
   let error = firstAttempt.error;
@@ -983,7 +989,8 @@ export async function createSupabaseFormResponse(
   if (
     error &&
     (isMissingColumnError(error.message, "member_id") ||
-      isMissingColumnError(error.message, "respondent_phone"))
+      isMissingColumnError(error.message, "respondent_phone") ||
+      isMissingColumnError(error.message, "metadata"))
   ) {
     error = (await supabase.from("intake_form_responses").insert(basePayload)).error;
   }
