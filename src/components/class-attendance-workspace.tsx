@@ -14,16 +14,6 @@ type ClassAttendanceWorkspaceProps = {
   members: Profile[];
 };
 
-type NewClassForm = {
-  title: string;
-  category: string;
-  coach: string;
-  day: string;
-  time: string;
-  room: string;
-  capacity: string;
-};
-
 type FilterState = {
   category: string;
   day: string;
@@ -35,16 +25,6 @@ type ImportResult = {
   message?: string;
   error?: string;
   summary?: Array<{ sheet: string; rows: number }>;
-};
-
-const defaultForm: NewClassForm = {
-  title: "",
-  category: "Yoga",
-  coach: "",
-  day: "Monday",
-  time: "",
-  room: "",
-  capacity: "20",
 };
 
 const defaultFilters: FilterState = {
@@ -94,10 +74,9 @@ export function ClassAttendanceWorkspace({
     category: guessCategory(session),
   }));
 
-  const [classes, setClasses] = useState(initialClasses);
+  const [classes] = useState(initialClasses);
   const [attendanceState, setAttendanceState] = useState(attendance);
   const [selectedClassId, setSelectedClassId] = useState(initialClasses[0]?.id ?? "");
-  const [form, setForm] = useState<NewClassForm>(defaultForm);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [isUploading, setIsUploading] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -147,27 +126,6 @@ export function ClassAttendanceWorkspace({
     present: selectedAttendance.filter((entry) => entry.status === "Checked In").length,
     absent: selectedAttendance.filter((entry) => entry.status === "Missed").length,
   };
-
-  function addClass() {
-    if (!form.title || !form.time || !form.coach || !form.room) {
-      return;
-    }
-
-    const newClass: AttendanceClass = {
-      id: `session-${crypto.randomUUID()}`,
-      title: form.title,
-      category: form.category,
-      coach: form.coach,
-      day: form.day,
-      time: form.time,
-      room: form.room,
-      capacity: Number(form.capacity) || 20,
-    };
-
-    setClasses((current) => [newClass, ...current]);
-    setSelectedClassId(newClass.id);
-    setForm(defaultForm);
-  }
 
   function updateAttendance(memberId: string, status: Attendance["status"]) {
     if (!selectedClass?.id) {
@@ -220,8 +178,7 @@ export function ClassAttendanceWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
             Filters and Excel
           </p>
@@ -345,95 +302,7 @@ export function ClassAttendanceWorkspace({
               ) : null}
             </div>
           ) : null}
-        </section>
-
-        <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
-            Add new class
-          </p>
-          <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Add any class, from yoga to workshops
-          </h2>
-          <div className="mt-5 grid gap-4">
-            <input
-              value={form.title}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, title: event.target.value }))
-              }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-              placeholder="Class name"
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input
-                value={form.category}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, category: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="Category"
-              />
-              <input
-                value={form.coach}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, coach: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="Coach name"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <select
-                value={form.day}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, day: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-              >
-                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={form.time}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, time: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="07:00 AM"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input
-                value={form.room}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, room: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="Zoom Room / Studio"
-              />
-              <input
-                value={form.capacity}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, capacity: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 px-4 py-3"
-                placeholder="Capacity"
-                type="number"
-                min="1"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={addClass}
-              className="rounded-full bg-orange-500 px-5 py-3 font-semibold text-slate-950"
-            >
-              Add class
-            </button>
-          </div>
-        </section>
-      </div>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
@@ -492,7 +361,7 @@ export function ClassAttendanceWorkspace({
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                No classes match the current filters. Reset the filters or add a new class.
+                No classes match the current filters. Reset the filters or import the latest attendance workbook.
               </div>
             )}
           </div>
@@ -573,7 +442,7 @@ export function ClassAttendanceWorkspace({
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                No attendees have been added for this class yet. You can import attendance from Excel, or this list will populate after registrations are added.
+                No attendees have been added for this class yet. Import the attendance workbook or collect the latest class registrations through your form flow.
               </div>
             )}
           </div>

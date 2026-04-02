@@ -12,7 +12,7 @@ export default async function AdminAttendancePage() {
     <AppShell
       role="admin"
       title="Attendance"
-      subtitle="Manage class-wise attendance in a separate workspace and add any new class like yoga, strength, or workshop sessions."
+      subtitle="Review attendance records from your class flow, apply filters, and manage present, registered, or absent status."
       navLinks={adminNavLinks}
     >
       <ClassAttendanceWorkspace
@@ -24,9 +24,9 @@ export default async function AdminAttendancePage() {
       <div className="mt-6">
         <SectionCard eyebrow="Note" title="How this page works">
           <p className="text-slate-700">
-            This page is built for quick attendance handling. You can create a new
-            class, select it from the list, and mark each client as registered,
-            present, or absent.
+            This page is built for quick attendance handling. Select an existing
+            class, review the incoming attendance list, and mark each client as
+            registered, present, or absent.
           </p>
         </SectionCard>
       </div>
