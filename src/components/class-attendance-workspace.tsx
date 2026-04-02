@@ -2,366 +2,233 @@
 
 import { useState } from "react";
 
-import { Attendance, ClassSession, Profile } from "@/lib/types";
-
-type AttendanceClass = ClassSession & {
-  category: string;
-};
+import { IntakeForm, IntakeFormField, IntakeFormResponse } from "@/lib/forms";
+import { Profile } from "@/lib/types";
 
 type ClassAttendanceWorkspaceProps = {
-  sessions: ClassSession[];
-  attendance: Attendance[];
+  forms: IntakeForm[];
+  responses: IntakeFormResponse[];
   members: Profile[];
 };
 
 type FilterState = {
-  category: string;
-  day: string;
-  coach: string;
-  time: string;
-};
-
-type ImportResult = {
-  message?: string;
-  error?: string;
-  summary?: Array<{ sheet: string; rows: number }>;
+  audience: string;
+  date: string;
+  search: string;
 };
 
 const defaultFilters: FilterState = {
-  category: "All",
-  day: "All",
-  coach: "All",
-  time: "",
+  audience: "All",
+  date: new Date().toISOString().slice(0, 10),
+  search: "",
 };
 
-const statusStyles = {
-  Booked: "border-slate-300 bg-white text-slate-700",
-  "Checked In": "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Missed: "border-rose-200 bg-rose-50 text-rose-700",
-} as const;
+function getResponseFieldValue(
+  form: IntakeForm,
+  response: IntakeFormResponse,
+  options: { type?: IntakeFormField["type"]; labelPattern?: RegExp },
+) {
+  const field = form.fields.find((item) => {
+    if (options.type && item.type === options.type) {
+      return true;
+    }
 
-const statusLabels = {
-  Booked: "Registered",
-  "Checked In": "Present",
-  Missed: "Absent",
-} as const;
+    if (options.labelPattern && options.labelPattern.test(item.label)) {
+      return true;
+    }
 
-function guessCategory(session: ClassSession) {
-  const title = session.title.toLowerCase();
+    return false;
+  });
 
-  if (title.includes("mobility") || title.includes("yoga")) {
-    return "Yoga";
-  }
-
-  if (title.includes("core")) {
-    return "Core";
-  }
-
-  if (title.includes("strength")) {
-    return "Strength";
-  }
-
-  return "Workshop";
+  return field ? response.answers[field.id] ?? "" : "";
 }
 
 export function ClassAttendanceWorkspace({
-  sessions,
-  attendance,
+  forms,
+  responses,
   members,
 }: ClassAttendanceWorkspaceProps) {
-  const initialClasses: AttendanceClass[] = sessions.map((session) => ({
-    ...session,
-    category: guessCategory(session),
-  }));
-
-  const [classes] = useState(initialClasses);
-  const [attendanceState, setAttendanceState] = useState(attendance);
-  const [selectedClassId, setSelectedClassId] = useState(initialClasses[0]?.id ?? "");
+  const [selectedFormId, setSelectedFormId] = useState(forms[0]?.id ?? "");
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
-  const [isUploading, setIsUploading] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  const categories = Array.from(new Set(classes.map((item) => item.category)));
-  const days = Array.from(new Set(classes.map((item) => item.day)));
-  const coaches = Array.from(new Set(classes.map((item) => item.coach)));
+  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? forms[0] ?? null;
+  const audiences = Array.from(new Set(forms.map((form) => form.audience).filter(Boolean))).sort();
 
-  const filteredClasses = classes.filter((item) => {
-    const matchesCategory =
-      filters.category === "All" || item.category === filters.category;
-    const matchesDay = filters.day === "All" || item.day === filters.day;
-    const matchesCoach = filters.coach === "All" || item.coach === filters.coach;
-    const matchesTime =
-      !filters.time ||
-      item.time.toLowerCase().includes(filters.time.trim().toLowerCase());
+  const filteredForms = forms.filter((form) => {
+    const matchesAudience = filters.audience === "All" || form.audience === filters.audience;
+    const matchesSearch =
+      !filters.search.trim() ||
+      form.title.toLowerCase().includes(filters.search.trim().toLowerCase()) ||
+      form.description.toLowerCase().includes(filters.search.trim().toLowerCase());
 
-    return matchesCategory && matchesDay && matchesCoach && matchesTime;
+    return matchesAudience && matchesSearch;
   });
 
-  const availableClassIds = new Set(filteredClasses.map((item) => item.id));
-  const selectedClass = filteredClasses.find((session) => session.id === selectedClassId)
-    ?? classes.find((session) => session.id === selectedClassId)
-    ?? filteredClasses[0];
+  const selectedResponses = responses
+    .filter((response) => response.formId === selectedForm?.id)
+    .filter((response) => {
+      const [datePart = ""] = response.submittedAt.split(" ");
+      return !filters.date || datePart === filters.date;
+    });
 
-  const selectedAttendance = attendanceState.filter(
-    (entry) => entry.sessionId === selectedClass?.id,
-  );
+  const attendeeRows = selectedForm
+    ? selectedResponses.map((response) => {
+        const matchedMember = response.memberId
+          ? members.find((member) => member.id === response.memberId)
+          : undefined;
+        const name =
+          matchedMember?.fullName ||
+          getResponseFieldValue(selectedForm, response, {
+            labelPattern: /full\s*name|name/i,
+          }) ||
+          "Unknown attendee";
+        const phone =
+          matchedMember?.phone ||
+          response.respondentPhone ||
+          getResponseFieldValue(selectedForm, response, { type: "phone" }) ||
+          "-";
+        const email =
+          matchedMember?.email ||
+          getResponseFieldValue(selectedForm, response, { type: "email" }) ||
+          "-";
 
-  const attendeesForSelectedClass = selectedAttendance
-    .map((entry) => {
-      const member = members.find((item) => item.id === entry.memberId);
-
-      if (!member) {
-        return null;
-      }
-
-      return {
-        member,
-        status: entry.status,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+        return {
+          response,
+          matchedMember,
+          name,
+          phone,
+          email,
+          submittedAt: response.submittedAt,
+          location: response.metadata?.submittedFrom || "-",
+          device: response.metadata?.deviceType || "-",
+        };
+      })
+    : [];
 
   const summary = {
-    registered: selectedAttendance.filter((entry) => entry.status === "Booked").length,
-    present: selectedAttendance.filter((entry) => entry.status === "Checked In").length,
-    absent: selectedAttendance.filter((entry) => entry.status === "Missed").length,
+    total: attendeeRows.length,
+    matched: attendeeRows.filter((row) => row.matchedMember).length,
+    unmatched: attendeeRows.filter((row) => !row.matchedMember).length,
+    latest:
+      attendeeRows
+        .map((row) => row.submittedAt)
+        .sort((left, right) => right.localeCompare(left))[0] ?? "-",
   };
-
-  function updateAttendance(memberId: string, status: Attendance["status"]) {
-    if (!selectedClass?.id) {
-      return;
-    }
-
-    setAttendanceState((current) => {
-      const existing = current.find(
-        (entry) => entry.sessionId === selectedClass.id && entry.memberId === memberId,
-      );
-
-      if (existing) {
-        return current.map((entry) =>
-          entry.id === existing.id ? { ...entry, status } : entry,
-        );
-      }
-
-      return [
-        ...current,
-        {
-          id: `attendance-${selectedClass.id}-${memberId}`,
-          sessionId: selectedClass.id,
-          memberId,
-          status,
-        },
-      ];
-    });
-  }
-
-  async function handleAttendanceImport(formData: FormData) {
-    setIsUploading(true);
-    setImportResult(null);
-
-    const response = await fetch("/api/admin/attendance/import", {
-      method: "POST",
-      body: formData,
-    });
-
-    const payload = (await response.json()) as ImportResult;
-    setImportResult(payload);
-    setIsUploading(false);
-  }
-
-  const groupedFilteredClasses = categories
-    .map((category) => ({
-      category,
-      items: filteredClasses.filter((item) => item.category === category),
-    }))
-    .filter((group) => group.items.length > 0);
 
   return (
     <div className="space-y-6">
       <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
-            Filters and Excel
-          </p>
-          <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Time-based filters and import/export
-          </h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <select
-              value={filters.category}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, category: event.target.value }))
-              }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-            >
-              <option value="All">All categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.day}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, day: event.target.value }))
-              }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-            >
-              <option value="All">All days</option>
-              {days.map((day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.coach}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, coach: event.target.value }))
-              }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-            >
-              <option value="All">All coaches</option>
-              {coaches.map((coach) => (
-                <option key={coach} value={coach}>
-                  {coach}
-                </option>
-              ))}
-            </select>
-            <input
-              value={filters.time}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, time: event.target.value }))
-              }
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-              placeholder="Filter by time e.g. 07:00"
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setFilters(defaultFilters)}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-            >
-              Reset filters
-            </button>
-            <a
-              href="/api/admin/attendance/export"
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-            >
-              Export attendance Excel
-            </a>
-            <a
-              href="/api/admin/attendance/template"
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
-            >
-              Download template
-            </a>
-          </div>
-          <form
-            className="mt-5 space-y-4"
-            action={async (formData) => {
-              await handleAttendanceImport(formData);
-            }}
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+          Form-based attendance
+        </p>
+        <h2 className="mt-2 font-serif text-2xl text-slate-950">
+          Attendance now comes from submitted forms
+        </h2>
+        <p className="mt-2 text-slate-600">
+          Each attendance form works like a class roster. When someone submits the form,
+          they appear here for the selected date.
+        </p>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <select
+            value={filters.audience}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, audience: event.target.value }))
+            }
+            className="rounded-2xl border border-slate-300 px-4 py-3"
           >
-            <input
-              className="block w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3"
-              type="file"
-              name="file"
-              accept=".xlsx"
-              required
-            />
-            <button
-              type="submit"
-              disabled={isUploading}
-              className="rounded-full bg-orange-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-70"
-            >
-              {isUploading ? "Checking attendance file..." : "Import attendance Excel"}
-            </button>
-          </form>
-          {importResult ? (
-            <div className="mt-4 rounded-[1.5rem] bg-slate-50 p-4">
-              {importResult.error ? (
-                <p className="font-medium text-rose-700">{importResult.error}</p>
-              ) : null}
-              {importResult.message ? (
-                <p className="font-medium text-emerald-700">{importResult.message}</p>
-              ) : null}
-              {importResult.summary ? (
-                <div className="mt-3 grid gap-2 text-sm text-slate-700">
-                  {importResult.summary.map((item) => (
-                    <div
-                      key={item.sheet}
-                      className="flex items-center justify-between rounded-xl bg-white px-4 py-3"
-                    >
-                      <span>{item.sheet}</span>
-                      <span className="font-semibold">{item.rows} rows</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+            <option value="All">All audiences</option>
+            {audiences.map((audience) => (
+              <option key={audience} value={audience}>
+                {audience}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={filters.date}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, date: event.target.value }))
+            }
+            className="rounded-2xl border border-slate-300 px-4 py-3"
+          />
+          <input
+            value={filters.search}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, search: event.target.value }))
+            }
+            className="rounded-2xl border border-slate-300 px-4 py-3"
+            placeholder="Search forms"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setFilters(defaultFilters)}
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          >
+            Reset filters
+          </button>
+          <a
+            href="/admin/form-responses"
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Open form responses
+          </a>
+          <a
+            href="/admin/forms"
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
+          >
+            Manage attendance forms
+          </a>
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
-            Class list
+            Form list
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            Filtered attendance classes
+            Attendance sources
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            {filteredClasses.length} class(es) match current filters.
+            {filteredForms.length} form(s) match the current filters.
           </p>
-          <div className="mt-5 space-y-5">
-            {groupedFilteredClasses.length > 0 ? (
-              groupedFilteredClasses.map((group) => (
-                <div key={group.category}>
-                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-                    {group.category}
-                  </p>
-                  <div className="grid gap-3">
-                    {group.items.map((session) => {
-                      const classAttendeeCount = attendanceState.filter(
-                        (entry) => entry.sessionId === session.id,
-                      ).length;
 
-                      return (
-                        <button
-                          key={session.id}
-                          type="button"
-                          onClick={() => setSelectedClassId(session.id)}
-                          className={`rounded-[1.5rem] border p-4 text-left ${
-                            selectedClassId === session.id
-                              ? "border-orange-300 bg-orange-50"
-                              : "border-slate-200 bg-white"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold text-slate-950">{session.title}</p>
-                              <p className="mt-1 text-sm text-slate-600">
-                                {session.day} | {session.time}
-                              </p>
-                            </div>
-                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                              {classAttendeeCount} attendees
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm text-slate-500">
-                            {session.coach} | {session.room}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
+          <div className="mt-5 space-y-3">
+            {filteredForms.length > 0 ? (
+              filteredForms.map((form) => {
+                const formCount = responses.filter((response) => response.formId === form.id).length;
+
+                return (
+                  <button
+                    key={form.id}
+                    type="button"
+                    onClick={() => setSelectedFormId(form.id)}
+                    className={`w-full rounded-[1.5rem] border p-4 text-left ${
+                      selectedForm?.id === form.id
+                        ? "border-orange-300 bg-orange-50"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-950">{form.title}</p>
+                        <p className="mt-1 text-sm text-slate-600">{form.description}</p>
+                      </div>
+                      <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+                        {formCount} rows
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-500">{form.audience}</p>
+                  </button>
+                );
+              })
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                No classes match the current filters. Reset the filters or import the latest attendance workbook.
+                No attendance forms match the current filters.
               </div>
             )}
           </div>
@@ -369,80 +236,65 @@ export function ClassAttendanceWorkspace({
 
         <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
-            Attendance manager
+            Attendance roster
           </p>
           <h2 className="mt-2 font-serif text-2xl text-slate-950">
-            {selectedClass?.title ?? "Select a class"}
+            {selectedForm?.title ?? "Select an attendance form"}
           </h2>
           <p className="mt-2 text-slate-600">
-            {selectedClass?.category} | {selectedClass?.day} | {selectedClass?.time}
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            Selected class na actual attendees niche dekhashe.
-            {!availableClassIds.has(selectedClass?.id ?? "")
-              ? " This class does not match the current filters but is still selected."
-              : ""}
+            {selectedForm?.audience ?? "-"} | {filters.date || "All dates"}
           </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-4">
             <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Registered</p>
-              <p className="mt-3 text-3xl font-semibold">{summary.registered}</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Submissions</p>
+              <p className="mt-3 text-3xl font-semibold">{summary.total}</p>
             </div>
             <div className="rounded-[1.5rem] bg-emerald-50 p-4 text-emerald-800">
-              <p className="text-sm uppercase tracking-[0.24em] text-emerald-600">Present</p>
-              <p className="mt-3 text-3xl font-semibold">{summary.present}</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-emerald-600">Matched users</p>
+              <p className="mt-3 text-3xl font-semibold">{summary.matched}</p>
             </div>
-            <div className="rounded-[1.5rem] bg-rose-50 p-4 text-rose-800">
-              <p className="text-sm uppercase tracking-[0.24em] text-rose-600">Absent</p>
-              <p className="mt-3 text-3xl font-semibold">{summary.absent}</p>
+            <div className="rounded-[1.5rem] bg-amber-50 p-4 text-amber-800">
+              <p className="text-sm uppercase tracking-[0.24em] text-amber-600">Unmatched</p>
+              <p className="mt-3 text-3xl font-semibold">{summary.unmatched}</p>
+            </div>
+            <div className="rounded-[1.5rem] bg-slate-50 p-4 text-slate-900">
+              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Latest submit</p>
+              <p className="mt-3 text-lg font-semibold">{summary.latest}</p>
             </div>
           </div>
 
           <div className="mt-6 space-y-4">
-            {attendeesForSelectedClass.length > 0 ? (
-              attendeesForSelectedClass.map(({ member, status }) => (
-                <div key={member.id} className="rounded-[1.5rem] border border-slate-200 p-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {attendeeRows.length > 0 ? (
+              attendeeRows.map((row) => (
+                <div key={row.response.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="font-semibold text-slate-950">{member.fullName}</p>
-                      <p className="text-sm text-slate-600">{member.fitnessGoal}</p>
-                      <p className="mt-1 text-sm text-slate-500">{member.email}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-slate-950">{row.name}</p>
+                        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                          Present via form
+                        </span>
+                        {row.matchedMember ? (
+                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+                            Matched user
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-sm text-slate-600">{row.phone}</p>
+                      <p className="mt-1 text-sm text-slate-500">{row.email}</p>
                     </div>
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium ${statusStyles[status]}`}
-                    >
-                      {statusLabels[status]}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateAttendance(member.id, "Booked")}
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-                    >
-                      Registered
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateAttendance(member.id, "Checked In")}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
-                    >
-                      Present
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateAttendance(member.id, "Missed")}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700"
-                    >
-                      Absent
-                    </button>
+                    <div className="text-sm text-slate-500 lg:text-right">
+                      <p>{row.submittedAt}</p>
+                      <p className="mt-1">{row.location}</p>
+                      <p className="mt-1">{row.device}</p>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
-                No attendees have been added for this class yet. Import the attendance workbook or collect the latest class registrations through your form flow.
+                No attendance submissions were found for this form and date. Once users submit the attendance form, they will appear here automatically.
               </div>
             )}
           </div>
