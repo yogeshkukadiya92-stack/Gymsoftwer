@@ -103,6 +103,10 @@ export function FormResponsesWorkspace({
   const [selectedDate, setSelectedDate] = useState("");
   const [fromTime, setFromTime] = useState("");
   const [toTime, setToTime] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [deviceFilter, setDeviceFilter] = useState("");
+  const [browserFilter, setBrowserFilter] = useState("");
   const [selectedResponseId, setSelectedResponseId] = useState("");
   const [newForm, setNewForm] = useState<NewIntakeFormInput>({
     title: "",
@@ -128,9 +132,41 @@ export function FormResponsesWorkspace({
 
   const selectedForm =
     formsState.find((form) => form.id === selectedFormId) ?? formsState[0];
+  const formResponses = useMemo(
+    () => responsesState.filter((response) => response.formId === selectedForm?.id),
+    [responsesState, selectedForm],
+  );
+  const countryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(formResponses.map((response) => response.metadata?.country || "").filter(Boolean)),
+      ).sort(),
+    [formResponses],
+  );
+  const cityOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(formResponses.map((response) => response.metadata?.city || "").filter(Boolean)),
+      ).sort(),
+    [formResponses],
+  );
+  const deviceOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          formResponses.map((response) => response.metadata?.deviceType || "").filter(Boolean),
+        ),
+      ).sort(),
+    [formResponses],
+  );
+  const browserOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(formResponses.map((response) => response.metadata?.browser || "").filter(Boolean)),
+      ).sort(),
+    [formResponses],
+  );
   const selectedResponses = useMemo(() => {
-    const formResponses = responsesState.filter((response) => response.formId === selectedForm?.id);
-
     return formResponses.filter((response) => {
       const [datePart = "", timePart = ""] = response.submittedAt.split(" ");
       const normalizedResponseDate = datePart;
@@ -138,15 +174,44 @@ export function FormResponsesWorkspace({
       const matchesSearch =
         !searchQuery.trim() ||
         response.submittedAt.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-        Object.values(response.answers).join(" ").toLowerCase().includes(searchQuery.trim().toLowerCase());
+        Object.values(response.answers).join(" ").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (response.metadata?.submittedFrom || "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (response.metadata?.browser || "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (response.metadata?.deviceType || "").toLowerCase().includes(searchQuery.trim().toLowerCase());
 
       const matchesDate = !selectedDate || normalizedResponseDate === selectedDate;
       const matchesFromTime = !fromTime || normalizedResponseTime >= fromTime;
       const matchesToTime = !toTime || normalizedResponseTime <= toTime;
+      const matchesCountry =
+        !countryFilter || (response.metadata?.country || "") === countryFilter;
+      const matchesCity = !cityFilter || (response.metadata?.city || "") === cityFilter;
+      const matchesDevice =
+        !deviceFilter || (response.metadata?.deviceType || "") === deviceFilter;
+      const matchesBrowser =
+        !browserFilter || (response.metadata?.browser || "") === browserFilter;
 
-      return matchesDate && matchesFromTime && matchesToTime && matchesSearch;
+      return (
+        matchesDate &&
+        matchesFromTime &&
+        matchesToTime &&
+        matchesCountry &&
+        matchesCity &&
+        matchesDevice &&
+        matchesBrowser &&
+        matchesSearch
+      );
     });
-  }, [responsesState, searchQuery, selectedForm, selectedDate, fromTime, toTime]);
+  }, [
+    formResponses,
+    searchQuery,
+    selectedDate,
+    fromTime,
+    toTime,
+    countryFilter,
+    cityFilter,
+    deviceFilter,
+    browserFilter,
+  ]);
   const selectedResponse =
     selectedResponses.find((response) => response.id === selectedResponseId) ??
     selectedResponses[0] ??
@@ -168,6 +233,10 @@ export function FormResponsesWorkspace({
     if (selectedDate) params.set("date", selectedDate);
     if (fromTime) params.set("fromTime", fromTime);
     if (toTime) params.set("toTime", toTime);
+    if (countryFilter) params.set("country", countryFilter);
+    if (cityFilter) params.set("city", cityFilter);
+    if (deviceFilter) params.set("device", deviceFilter);
+    if (browserFilter) params.set("browser", browserFilter);
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
     return `/api/admin/form-responses/export?${params.toString()}`;
   })();
@@ -697,7 +766,7 @@ export function FormResponsesWorkspace({
               </FilterToolbarItem>
               <FilterToolbarAction href={exportUrl}>Export current view</FilterToolbarAction>
             </FilterToolbar>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Filter by date
@@ -731,6 +800,74 @@ export function FormResponsesWorkspace({
                 className={fieldClassName}
               />
             </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Country
+              </span>
+              <select
+                value={countryFilter}
+                onChange={(event) => setCountryFilter(event.target.value)}
+                className={fieldClassName}
+              >
+                <option value="">All countries</option>
+                {countryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                City
+              </span>
+              <select
+                value={cityFilter}
+                onChange={(event) => setCityFilter(event.target.value)}
+                className={fieldClassName}
+              >
+                <option value="">All cities</option>
+                {cityOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Device
+              </span>
+              <select
+                value={deviceFilter}
+                onChange={(event) => setDeviceFilter(event.target.value)}
+                className={fieldClassName}
+              >
+                <option value="">All devices</option>
+                {deviceOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Browser
+              </span>
+              <select
+                value={browserFilter}
+                onChange={(event) => setBrowserFilter(event.target.value)}
+                className={fieldClassName}
+              >
+                <option value="">All browsers</option>
+                {browserOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
             </div>
           </div>
           <div className="mt-4">
@@ -741,6 +878,10 @@ export function FormResponsesWorkspace({
                   setSelectedDate("");
                   setFromTime("");
                   setToTime("");
+                  setCountryFilter("");
+                  setCityFilter("");
+                  setDeviceFilter("");
+                  setBrowserFilter("");
                   setSearchQuery("");
                 }}
                 className={secondaryButtonClassName}
