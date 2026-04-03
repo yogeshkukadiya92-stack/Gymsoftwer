@@ -64,6 +64,8 @@ export function UserManagementWorkspace({
   const [isRepairing, setIsRepairing] = useState<string | null>(null);
   const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
   const [bulkPasteValue, setBulkPasteValue] = useState("");
+  const [showBulkTools, setShowBulkTools] = useState(true);
+  const [showCreateUser, setShowCreateUser] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
@@ -488,6 +490,32 @@ export function UserManagementWorkspace({
 
   return (
     <div className="space-y-6">
+      <div className={`${panelClassName} flex flex-wrap items-center justify-between gap-3`}>
+        <div>
+          <h3 className="font-serif text-2xl text-slate-950">Users page controls</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            Show or hide extra sections to keep the page cleaner.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setShowBulkTools((current) => !current)}
+            className={secondaryButtonClassName}
+          >
+            {showBulkTools ? "Hide bulk tools" : "Show bulk tools"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreateUser((current) => !current)}
+            className={secondaryButtonClassName}
+          >
+            {showCreateUser ? "Hide create user" : "Show create user"}
+          </button>
+        </div>
+      </div>
+
+      {showBulkTools ? (
       <div className={panelClassName}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -580,8 +608,10 @@ export function UserManagementWorkspace({
           </div>
         </div>
       </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
+        {showCreateUser ? (
         <form
           onSubmit={handleSubmit}
           className={panelClassName}
@@ -704,6 +734,11 @@ export function UserManagementWorkspace({
             </div>
           </div>
         </form>
+        ) : (
+          <div className={`${panelClassName} flex items-center justify-center text-center text-sm text-slate-500`}>
+            Create user section is hidden. Use the toggle above to show it again.
+          </div>
+        )}
 
         <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
