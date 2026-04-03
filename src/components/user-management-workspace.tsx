@@ -789,16 +789,22 @@ export function UserManagementWorkspace({
                           : "bg-white hover:bg-slate-50"
                       }`}
                     >
-                      <td className="px-4 py-3 font-medium text-slate-950">{user.fullName}</td>
-                      <td className="px-4 py-3 text-slate-700">{user.email}</td>
-                      <td className="px-4 py-3 text-slate-700">{user.phone || "-"}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5 align-top font-medium text-slate-950">
+                        <span className="block max-w-[220px] leading-6">{user.fullName}</span>
+                      </td>
+                      <td className="px-4 py-2.5 align-top text-slate-700">
+                        <span className="block max-w-[260px] truncate leading-6">{user.email}</span>
+                      </td>
+                      <td className="px-4 py-2.5 align-top text-slate-700 whitespace-nowrap">{user.phone || "-"}</td>
+                      <td className="px-4 py-2.5 align-top">
                         <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{user.branch || "-"}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5 align-top text-slate-700">
+                        <span className="block max-w-[160px] leading-6">{user.branch || "-"}</span>
+                      </td>
+                      <td className="px-4 py-2.5 align-top">
                         {permissionLabel ? (
                           <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-orange-700">
                             {permissionLabel}
@@ -807,7 +813,7 @@ export function UserManagementWorkspace({
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5 align-top">
                         {!status?.loginReady ? (
                           <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">
                             Not ready
@@ -822,8 +828,8 @@ export function UserManagementWorkspace({
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{user.joinedOn || "-"}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5 align-top text-slate-700 whitespace-nowrap">{user.joinedOn || "-"}</td>
+                      <td className="px-4 py-2.5 align-top">
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
