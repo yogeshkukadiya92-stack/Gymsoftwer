@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
+  accentButtonClassName,
   emptyStateClassName,
   fieldClassName,
   FilterToolbar,
@@ -653,21 +654,21 @@ export function FormResponsesWorkspace({
           <p className="mt-2 text-slate-600">
             Raw responses for the selected form appear below in a table layout.
           </p>
-          {selectedForm ? (
-            <div className="mt-4 flex flex-wrap gap-3">
+            {selectedForm ? (
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href={`/admin/forms?formId=${selectedForm.id}`}
+                  className={accentButtonClassName}
+                >
+                  Open in Forms page
+                </Link>
+                <button
+                  type="button"
+                  onClick={openInlineEditor}
                   className={primaryButtonClassName}
                 >
-                  Open form editor
-                </Link>
-              <button
-                type="button"
-                onClick={openInlineEditor}
-                className={secondaryButtonClassName}
-              >
-                Inline edit form
-              </button>
+                  Inline edit form
+                </button>
               <button
                 type="button"
                 onClick={() => void duplicateSelectedForm()}
@@ -699,8 +700,17 @@ export function FormResponsesWorkspace({
               >
                 {isDeleting ? "Deleting..." : "Delete selected form"}
               </button>
-            </div>
-          ) : null}
+              </div>
+            ) : null}
+            {selectedForm ? (
+              <p className="mt-4 text-sm text-slate-600">
+                This form is already imported into the app. Use{" "}
+                <span className="font-semibold text-slate-950">Inline edit form</span> to edit
+                it here, or{" "}
+                <span className="font-semibold text-slate-950">Open in Forms page</span> to
+                manage it from the full builder.
+              </p>
+            ) : null}
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
               <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Responses</p>
