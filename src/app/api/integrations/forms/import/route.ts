@@ -38,7 +38,9 @@ function normalizeTallyPayload(body: Record<string, unknown>) {
     body.data && typeof body.data === "object"
       ? (body.data as Record<string, unknown>)
       : undefined;
-  const fields = Array.isArray(data?.fields) ? data.fields : [];
+  const topLevelFields = Array.isArray(body.fields) ? body.fields : [];
+  const nestedFields = Array.isArray(data?.fields) ? data.fields : [];
+  const fields = nestedFields.length > 0 ? nestedFields : topLevelFields;
 
   const answers = Object.fromEntries(
     fields
@@ -48,12 +50,15 @@ function normalizeTallyPayload(body: Record<string, unknown>) {
         }
 
         const record = field as Record<string, unknown>;
-        const label = String(record.label ?? record.key ?? "").trim();
+        const answerRecord =
+          record.answer && typeof record.answer === "object"
+            ? (record.answer as Record<string, unknown>)
+            : undefined;
+        const label = String(record.label ?? record.title ?? record.key ?? record.id ?? "").trim();
         const rawValue =
           record.value ??
-          (record.answer && typeof record.answer === "object"
-            ? (record.answer as Record<string, unknown>).value
-            : undefined);
+          answerRecord?.value ??
+          answerRecord?.raw;
 
         if (!label) {
           return null;
@@ -68,7 +73,7 @@ function normalizeTallyPayload(body: Record<string, unknown>) {
     source: "tally",
     form: {
       id: String(data?.formId ?? body.formId ?? "").trim(),
-      title: String(data?.formName ?? body.formName ?? "Tally form").trim(),
+      title: String(data?.formName ?? body.formName ?? body.title ?? "Tally form").trim(),
       description: "Imported from Tally webhook",
       audience: "External leads",
     },
@@ -109,8 +114,9 @@ export async function POST(request: Request) {
 
   const rawBody = (await request.json()) as Record<string, unknown>;
   const tallyLikePayload =
-    Boolean(rawBody.data && typeof rawBody.data === "object") &&
-    Array.isArray((rawBody.data as Record<string, unknown>).fields);
+    (Boolean(rawBody.data && typeof rawBody.data === "object") &&
+      Array.isArray((rawBody.data as Record<string, unknown>).fields)) ||
+    Array.isArray(rawBody.fields);
   const body = (tallyLikePayload ? normalizeTallyPayload(rawBody) : rawBody) as {
     source?: string;
     form?: {
