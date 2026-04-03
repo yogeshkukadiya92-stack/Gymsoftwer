@@ -758,110 +758,124 @@ export function UserManagementWorkspace({
               <option value="branch">Sort by branch</option>
             </select>
           </div>
-          {filteredUsers.map((user) => (
-            <button
-              type="button"
-              key={user.id}
-                onClick={() => setSelectedUserId(user.id)}
-                className={`block w-full rounded-[1.25rem] p-4 text-left transition ${
-                  selectedUserId === user.id
-                    ? "border border-orange-200 bg-gradient-to-br from-orange-50 to-white shadow-[0_16px_40px_rgba(249,115,22,0.10)]"
-                    : "border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] hover:border-slate-300"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{user.fullName}</p>
-                    <p className="text-sm text-slate-600">{user.email}</p>
-                  </div>
-                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
-                    {user.role}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-slate-500">
-                  {user.branch || "No branch"} - {user.phone || "No phone"}
-                </p>
-                {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel ? (
-                  <div className="mt-2">
-                    <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
-                      {userPermissions.find((entry) => entry.userId === user.id)?.accessLabel}
-                    </span>
-                  </div>
-                ) : null}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(() => {
-                    const status = loginStatuses.find((entry) => entry.userId === user.id);
+          <div className="overflow-x-auto rounded-[1.25rem] border border-slate-200 bg-white">
+            <table className="min-w-[980px] w-full text-left">
+              <thead className="bg-slate-950 text-white">
+                <tr className="text-xs uppercase tracking-[0.18em]">
+                  <th className="px-4 py-3 font-semibold">Name</th>
+                  <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Phone</th>
+                  <th className="px-4 py-3 font-semibold">Role</th>
+                  <th className="px-4 py-3 font-semibold">Branch</th>
+                  <th className="px-4 py-3 font-semibold">Access</th>
+                  <th className="px-4 py-3 font-semibold">Login</th>
+                  <th className="px-4 py-3 font-semibold">Joined</th>
+                  <th className="px-4 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => {
+                  const permissionLabel =
+                    userPermissions.find((entry) => entry.userId === user.id)?.accessLabel ?? "";
+                  const status = loginStatuses.find((entry) => entry.userId === user.id);
 
-                    if (!status?.loginReady) {
-                      return (
-                        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
-                          Login not ready
+                  return (
+                    <tr
+                      key={user.id}
+                      onClick={() => setSelectedUserId(user.id)}
+                      className={`cursor-pointer border-t border-slate-200 text-sm transition ${
+                        selectedUserId === user.id
+                          ? "bg-orange-50/70"
+                          : "bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-950">{user.fullName}</td>
+                      <td className="px-4 py-3 text-slate-700">{user.email}</td>
+                      <td className="px-4 py-3 text-slate-700">{user.phone || "-"}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                          {user.role}
                         </span>
-                      );
-                    }
-
-                    if (status.mustResetPassword) {
-                      return (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-                          Must reset password
-                        </span>
-                      );
-                    }
-
-                    return (
-                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                        Login ready
-                      </span>
-                    );
-                  })()}
-                </div>
-                <div className="mt-3 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleRepairLogin(user);
-                    }}
-                    disabled={isRepairing !== null}
-                    className={secondaryButtonClassName}
-                  >
-                    {isRepairing === user.id ? "Repairing..." : "Repair login"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleVerifyLogin(user);
-                    }}
-                    disabled={isVerifying}
-                    className={secondaryButtonClassName}
-                  >
-                    {isVerifying && selectedUserId === user.id ? "Verifying..." : "Verify login"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleEdit(user);
-                    }}
-                    className={secondaryButtonClassName}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleDelete(user);
-                    }}
-                    disabled={isDeleting === user.id}
-                    className={dangerButtonClassName}
-                  >
-                    {isDeleting === user.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </button>
-            ))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{user.branch || "-"}</td>
+                      <td className="px-4 py-3">
+                        {permissionLabel ? (
+                          <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-orange-700">
+                            {permissionLabel}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!status?.loginReady ? (
+                          <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">
+                            Not ready
+                          </span>
+                        ) : status.mustResetPassword ? (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                            Reset pending
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                            Ready
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{user.joinedOn || "-"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleEdit(user);
+                            }}
+                            className={secondaryButtonClassName}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleVerifyLogin(user);
+                            }}
+                            disabled={isVerifying}
+                            className={secondaryButtonClassName}
+                          >
+                            Verify
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleRepairLogin(user);
+                            }}
+                            disabled={isRepairing !== null}
+                            className={secondaryButtonClassName}
+                          >
+                            {isRepairing === user.id ? "Repairing..." : "Repair"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDelete(user);
+                            }}
+                            disabled={isDeleting === user.id}
+                            className={dangerButtonClassName}
+                          >
+                            {isDeleting === user.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           {filteredUsers.length === 0 ? (
             <div className={emptyStateClassName}>
               No users match the current search or filters.
