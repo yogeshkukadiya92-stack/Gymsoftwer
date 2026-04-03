@@ -15,12 +15,16 @@ type FilterState = {
   audience: string;
   date: string;
   search: string;
+  summaryFrom: string;
+  summaryTo: string;
 };
 
 const defaultFilters: FilterState = {
   audience: "All",
   date: new Date().toISOString().slice(0, 10),
   search: "",
+  summaryFrom: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  summaryTo: new Date().toISOString().slice(0, 10),
 };
 
 function getResponseFieldValue(
@@ -180,43 +184,59 @@ export function ClassAttendanceWorkspace({
   const maxDailyCount = Math.max(...dailyRows.map((row) => row.count), 1);
   const totalMatchedResponses = allAttendanceResponses.filter((response) => response.memberId).length;
   const totalUnmatchedResponses = allAttendanceResponses.length - totalMatchedResponses;
-  const currentWeekKey = getWeekKey(new Date().toISOString().slice(0, 10));
-  const currentWeekResponses = allAttendanceResponses.filter((response) => {
+  const rangeResponses = allAttendanceResponses.filter((response) => {
     const [datePart = ""] = response.submittedAt.split(" ");
-    return datePart && getWeekKey(datePart) === currentWeekKey;
+    if (!datePart) {
+      return false;
+    }
+
+    if (filters.summaryFrom && datePart < filters.summaryFrom) {
+      return false;
+    }
+
+    if (filters.summaryTo && datePart > filters.summaryTo) {
+      return false;
+    }
+
+    return true;
   });
-  const currentWeekUniquePhones = new Set(
-    currentWeekResponses
+  const rangeUniquePhones = new Set(
+    rangeResponses
       .map((response) => response.respondentPhone?.trim() || "")
       .filter(Boolean),
   );
-  const currentWeekUniqueMembers = new Set(
-    currentWeekResponses
+  const rangeUniqueMembers = new Set(
+    rangeResponses
       .map((response) => response.memberId?.trim() || "")
       .filter(Boolean),
   );
-  const currentWeekParticipants =
-    currentWeekUniqueMembers.size + currentWeekUniquePhones.size;
+  const rangeParticipants = rangeUniqueMembers.size + rangeUniquePhones.size;
   const totalMembers = members.length;
   const participationRate =
-    totalMembers > 0 ? Math.round((currentWeekParticipants / totalMembers) * 100) : 0;
-  const selectedFormWeeklyResponses = selectedForm
-    ? currentWeekResponses.filter((response) => response.formId === selectedForm.id)
-    : [];
+    totalMembers > 0 ? Math.round((rangeParticipants / totalMembers) * 100) : 0;
+  const rangeFormBreakdown = forms
+    .map((form) => ({
+      title: form.title,
+      count: rangeResponses.filter((response) => response.formId === form.id).length,
+    }))
+    .filter((item) => item.count > 0)
+    .sort((left, right) => right.count - left.count);
   const shareableWeeklySummaryLines = [
-    "Weekly attendance summary",
-    `Week starting: ${currentWeekKey}`,
+    "Attendance summary",
+    `From: ${filters.summaryFrom || "-"}`,
+    `To: ${filters.summaryTo || "-"}`,
     `Total users: ${totalMembers}`,
-    `Participants from total users: ${currentWeekParticipants}/${totalMembers} (${participationRate}%)`,
-    `Total attendance form submissions: ${currentWeekResponses.length}`,
-    `Estimated total participants: ${currentWeekParticipants}`,
-    `Matched users: ${currentWeekResponses.filter((response) => response.memberId).length}`,
+    `Participants from total users: ${rangeParticipants}/${totalMembers} (${participationRate}%)`,
+    `Total attendance form submissions: ${rangeResponses.length}`,
+    `Estimated total participants: ${rangeParticipants}`,
+    `Matched users: ${rangeResponses.filter((response) => response.memberId).length}`,
   ];
 
-  if (selectedForm) {
-    shareableWeeklySummaryLines.push(
-      `${selectedForm.title} submissions: ${selectedFormWeeklyResponses.length}`,
-    );
+  if (rangeFormBreakdown.length > 0) {
+    shareableWeeklySummaryLines.push("Form-wise submissions:");
+    rangeFormBreakdown.forEach((item) => {
+      shareableWeeklySummaryLines.push(`- ${item.title}: ${item.count}`);
+    });
   }
 
   const shareableWeeklySummary = shareableWeeklySummaryLines.join("\n");
@@ -298,6 +318,25 @@ export function ClassAttendanceWorkspace({
           >
             Manage attendance forms
           </a>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <input
+            type="date"
+            value={filters.summaryFrom}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, summaryFrom: event.target.value }))
+            }
+            className="rounded-2xl border border-slate-300 px-4 py-3"
+          />
+          <input
+            type="date"
+            value={filters.summaryTo}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, summaryTo: event.target.value }))
+            }
+            className="rounded-2xl border border-slate-300 px-4 py-3"
+          />
         </div>
       </section>
 
@@ -432,13 +471,13 @@ export function ClassAttendanceWorkspace({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
-                Shareable weekly summary
+                Shareable range summary
               </p>
               <h3 className="mt-2 font-serif text-xl text-slate-950">
-                Weekly participation report
+                Attendance participation report
               </h3>
               <p className="mt-2 text-sm text-slate-700">
-                Share a simple weekly report with total participants and attendance form submissions.
+                Share a simple summary for any date range with total users, participants, total submissions, and form-wise counts.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -462,8 +501,12 @@ export function ClassAttendanceWorkspace({
 
           <div className="mt-5 grid gap-4 md:grid-cols-4">
             <div className="rounded-[1.25rem] bg-white p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Week</p>
-              <p className="mt-2 font-semibold text-slate-950">{currentWeekKey}</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">From</p>
+              <p className="mt-2 font-semibold text-slate-950">{filters.summaryFrom || "-"}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">To</p>
+              <p className="mt-2 font-semibold text-slate-950">{filters.summaryTo || "-"}</p>
             </div>
             <div className="rounded-[1.25rem] bg-white p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Total users</p>
@@ -471,16 +514,12 @@ export function ClassAttendanceWorkspace({
             </div>
             <div className="rounded-[1.25rem] bg-white p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Participants</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-950">{currentWeekParticipants}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{rangeParticipants}</p>
               <p className="mt-1 text-sm text-slate-500">{participationRate}% of total users</p>
             </div>
             <div className="rounded-[1.25rem] bg-white p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-orange-600">All submissions</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-950">{currentWeekResponses.length}</p>
-            </div>
-            <div className="rounded-[1.25rem] bg-white p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Selected form</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-950">{selectedFormWeeklyResponses.length}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{rangeResponses.length}</p>
             </div>
           </div>
 
