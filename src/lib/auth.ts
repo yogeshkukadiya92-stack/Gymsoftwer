@@ -308,6 +308,22 @@ async function findProfileByEmail(email: string) {
   return data;
 }
 
+async function listProfiles() {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for user management.");
+  }
+
+  const { data, error } = await supabase.from("profiles").select("*");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
 export async function findProfileByLoginIdentifier(identifier: string) {
   const supabase = createSupabaseAdminClient();
 
@@ -437,12 +453,33 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
   const imported: Array<{ id: string; email: string; role: UserRole }> = [];
   const updated: Array<{ id: string; email: string; role: UserRole }> = [];
   const failed: Array<{ email: string; reason: string }> = [];
+  const authUsers = await listAuthUsers();
+  const profiles = await listProfiles();
+  type CachedAuthUser = {
+    id: string;
+    email: string;
+    user_metadata?: Record<string, unknown>;
+  };
+  const authUsersByEmail = new Map(
+    authUsers
+      .filter((user) => user.email)
+      .map((user) => [user.email!.trim().toLowerCase(), {
+        id: user.id,
+        email: user.email!,
+        user_metadata: (user.user_metadata ?? {}) as Record<string, unknown>,
+      } satisfies CachedAuthUser] as const),
+  );
+  const profilesByEmail = new Map(
+    profiles
+      .filter((profile) => profile.email)
+      .map((profile) => [String(profile.email).trim().toLowerCase(), profile] as const),
+  );
 
   for (const row of rows) {
     try {
-      const lookupEmail = row.currentEmail || row.email;
-      const existingAuthUser = lookupEmail ? await findAuthUserByEmail(lookupEmail) : null;
-      const existingProfile = lookupEmail ? await findProfileByEmail(lookupEmail) : null;
+      const lookupEmail = (row.currentEmail || row.email).trim().toLowerCase();
+      const existingAuthUser = lookupEmail ? authUsersByEmail.get(lookupEmail) ?? null : null;
+      const existingProfile = lookupEmail ? profilesByEmail.get(lookupEmail) ?? null : null;
 
       if (row.id || existingAuthUser || row.currentEmail.trim() || existingProfile?.id) {
         const user = await updateManagedUser({
@@ -463,6 +500,21 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
           });
         }
         updated.push(user);
+        authUsersByEmail.set(user.email.trim().toLowerCase(), {
+          ...(existingAuthUser ?? { id: user.id, email: user.email, user_metadata: {} }),
+          email: user.email,
+        });
+        profilesByEmail.set(user.email.trim().toLowerCase(), {
+          ...(existingProfile ?? {}),
+          id: user.id,
+          email: user.email,
+          full_name: row.fullName,
+          role: row.role,
+          phone: row.phone,
+          fitness_goal: row.fitnessGoal,
+          branch: row.branch,
+          joined_on: row.joinedOn || new Date().toISOString().slice(0, 10),
+        });
         continue;
       }
 
@@ -482,6 +534,21 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
         });
       }
       imported.push(user);
+      authUsersByEmail.set(user.email.trim().toLowerCase(), {
+        id: user.authUserId,
+        email: user.email,
+        user_metadata: { must_reset_password: true },
+      });
+      profilesByEmail.set(user.email.trim().toLowerCase(), {
+        id: user.id,
+        email: user.email,
+        full_name: row.fullName,
+        role: row.role,
+        phone: row.phone,
+        fitness_goal: row.fitnessGoal,
+        branch: row.branch,
+        joined_on: row.joinedOn || new Date().toISOString().slice(0, 10),
+      });
     } catch (error) {
       failed.push({
         email: row.email,
