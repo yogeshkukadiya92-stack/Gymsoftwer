@@ -180,6 +180,51 @@ export function ClassAttendanceWorkspace({
   const maxDailyCount = Math.max(...dailyRows.map((row) => row.count), 1);
   const totalMatchedResponses = allAttendanceResponses.filter((response) => response.memberId).length;
   const totalUnmatchedResponses = allAttendanceResponses.length - totalMatchedResponses;
+  const currentWeekKey = getWeekKey(new Date().toISOString().slice(0, 10));
+  const currentWeekResponses = allAttendanceResponses.filter((response) => {
+    const [datePart = ""] = response.submittedAt.split(" ");
+    return datePart && getWeekKey(datePart) === currentWeekKey;
+  });
+  const currentWeekUniquePhones = new Set(
+    currentWeekResponses
+      .map((response) => response.respondentPhone?.trim() || "")
+      .filter(Boolean),
+  );
+  const currentWeekUniqueMembers = new Set(
+    currentWeekResponses
+      .map((response) => response.memberId?.trim() || "")
+      .filter(Boolean),
+  );
+  const currentWeekParticipants =
+    currentWeekUniqueMembers.size + currentWeekUniquePhones.size;
+  const selectedFormWeeklyResponses = selectedForm
+    ? currentWeekResponses.filter((response) => response.formId === selectedForm.id)
+    : [];
+  const shareableWeeklySummaryLines = [
+    "Weekly attendance summary",
+    `Week starting: ${currentWeekKey}`,
+    `Total attendance form submissions: ${currentWeekResponses.length}`,
+    `Estimated total participants: ${currentWeekParticipants}`,
+    `Matched users: ${currentWeekResponses.filter((response) => response.memberId).length}`,
+  ];
+
+  if (selectedForm) {
+    shareableWeeklySummaryLines.push(
+      `${selectedForm.title} submissions: ${selectedFormWeeklyResponses.length}`,
+    );
+  }
+
+  const shareableWeeklySummary = shareableWeeklySummaryLines.join("\n");
+
+  async function handleCopyWeeklySummary() {
+    try {
+      await navigator.clipboard.writeText(shareableWeeklySummary);
+    } catch {
+      // no-op fallback for unsupported environments
+    }
+  }
+
+  const weeklyWhatsAppHref = `https://wa.me/?text=${encodeURIComponent(shareableWeeklySummary)}`;
 
   return (
     <div className="space-y-6">
@@ -377,6 +422,62 @@ export function ClassAttendanceWorkspace({
         <p className="mt-2 text-slate-600">
           Review overall participation, trends, top attendance forms, and device or location patterns from submitted attendance forms.
         </p>
+
+        <div className="mt-5 rounded-[1.5rem] border border-orange-200 bg-orange-50/70 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+                Shareable weekly summary
+              </p>
+              <h3 className="mt-2 font-serif text-xl text-slate-950">
+                Weekly participation report
+              </h3>
+              <p className="mt-2 text-sm text-slate-700">
+                Share a simple weekly report with total participants and attendance form submissions.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void handleCopyWeeklySummary()}
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+              >
+                Copy summary
+              </button>
+              <a
+                href={weeklyWhatsAppHref}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Share on WhatsApp
+              </a>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Week</p>
+              <p className="mt-2 font-semibold text-slate-950">{currentWeekKey}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Participants</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{currentWeekParticipants}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">All submissions</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{currentWeekResponses.length}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Selected form</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{selectedFormWeeklyResponses.length}</p>
+            </div>
+          </div>
+
+          <pre className="mt-4 whitespace-pre-wrap rounded-[1.25rem] bg-white p-4 text-sm text-slate-700">
+            {shareableWeeklySummary}
+          </pre>
+        </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-4">
           <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
