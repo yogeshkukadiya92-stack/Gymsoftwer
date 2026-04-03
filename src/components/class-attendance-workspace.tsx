@@ -197,12 +197,17 @@ export function ClassAttendanceWorkspace({
   );
   const currentWeekParticipants =
     currentWeekUniqueMembers.size + currentWeekUniquePhones.size;
+  const totalMembers = members.length;
+  const participationRate =
+    totalMembers > 0 ? Math.round((currentWeekParticipants / totalMembers) * 100) : 0;
   const selectedFormWeeklyResponses = selectedForm
     ? currentWeekResponses.filter((response) => response.formId === selectedForm.id)
     : [];
   const shareableWeeklySummaryLines = [
     "Weekly attendance summary",
     `Week starting: ${currentWeekKey}`,
+    `Total users: ${totalMembers}`,
+    `Participants from total users: ${currentWeekParticipants}/${totalMembers} (${participationRate}%)`,
     `Total attendance form submissions: ${currentWeekResponses.length}`,
     `Estimated total participants: ${currentWeekParticipants}`,
     `Matched users: ${currentWeekResponses.filter((response) => response.memberId).length}`,
@@ -461,8 +466,13 @@ export function ClassAttendanceWorkspace({
               <p className="mt-2 font-semibold text-slate-950">{currentWeekKey}</p>
             </div>
             <div className="rounded-[1.25rem] bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Total users</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{totalMembers}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-orange-600">Participants</p>
               <p className="mt-2 text-3xl font-semibold text-slate-950">{currentWeekParticipants}</p>
+              <p className="mt-1 text-sm text-slate-500">{participationRate}% of total users</p>
             </div>
             <div className="rounded-[1.25rem] bg-white p-4">
               <p className="text-xs uppercase tracking-[0.22em] text-orange-600">All submissions</p>
