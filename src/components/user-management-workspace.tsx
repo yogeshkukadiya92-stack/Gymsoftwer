@@ -60,9 +60,11 @@ export function UserManagementWorkspace({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRepairing, setIsRepairing] = useState<string | null>(null);
   const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
+  const [bulkPasteValue, setBulkPasteValue] = useState("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
@@ -408,6 +410,83 @@ export function UserManagementWorkspace({
     setIsImporting(false);
   }
 
+  async function handleQuickBulkCreate() {
+    const lines = bulkPasteValue
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      setStatusMessage("Paste at least one user row first.");
+      return;
+    }
+
+    const rows = lines
+      .map((line) => line.split(",").map((part) => part.trim()))
+      .filter((parts) => parts.length >= 3)
+      .map((parts) => ({
+        fullName: parts[0] || "",
+        email: parts[1] || "",
+        phone: parts[2] || "",
+        role: (parts[3] || "member") as "member" | "trainer" | "admin",
+        branch: parts[4] || "",
+        membershipStartDate: parts[5] || "",
+        membershipEndDate: parts[6] || "",
+        password: DEFAULT_FIRST_LOGIN_PASSWORD,
+        joinedOn: parts[5] || new Date().toISOString().slice(0, 10),
+      }))
+      .filter((row) => row.fullName && row.email && row.phone);
+
+    if (rows.length === 0) {
+      setStatusMessage(
+        "Invalid bulk format. Use: Name, Email, Phone, Role, Branch, Start Date, End Date",
+      );
+      return;
+    }
+
+    setIsQuickAdding(true);
+    setStatusMessage("");
+
+    const response = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "bulk_create",
+        rows,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      message?: string;
+      saved?: { imported: number; updated: number; failed?: number };
+      failedRows?: Array<{ email: string; reason: string }>;
+    };
+
+    if (!response.ok) {
+      setStatusMessage(payload.error ?? "Quick bulk user creation failed.");
+      setIsQuickAdding(false);
+      return;
+    }
+
+    await refreshUsers();
+    setBulkPasteValue("");
+    setStatusMessage(
+      `${payload.message ?? "Bulk users created."} Imported: ${payload.saved?.imported ?? 0}, updated: ${payload.saved?.updated ?? 0}${
+        payload.saved?.failed ? `, failed: ${payload.saved.failed}` : ""
+      }${
+        payload.failedRows?.length
+          ? `. Issues: ${payload.failedRows
+              .map((row) => `${row.email || "unknown"} (${row.reason})`)
+              .join("; ")}`
+          : ""
+      }`,
+    );
+    setIsQuickAdding(false);
+  }
+
   return (
     <div className="space-y-6">
       <div className={panelClassName}>
@@ -465,6 +544,42 @@ export function UserManagementWorkspace({
             "Choose a .xlsx users file, then click Upload selected file."
           )}
         </p>
+
+        <div className="mt-6 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+          <h4 className="font-serif text-xl text-slate-950">Quick bulk add</h4>
+          <p className="mt-2 text-sm text-slate-500">
+            Paste one user per line:
+            <span className="ml-1 font-medium text-slate-700">
+              Name, Email, Phone, Role, Branch, Start Date, End Date
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Example: Amit Patel, amit@gmail.com, 9876543210, member, Main Branch, 2026-04-03, 2026-05-03
+          </p>
+          <textarea
+            className={`${fieldClassName} mt-4 min-h-40`}
+            placeholder={"Amit Patel, amit@gmail.com, 9876543210, member, Main Branch, 2026-04-03, 2026-05-03\nRiya Shah, riya@gmail.com, 9988776655, member, Online Branch, 2026-04-03, 2026-05-03"}
+            value={bulkPasteValue}
+            onChange={(event) => setBulkPasteValue(event.target.value)}
+          />
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleQuickBulkCreate}
+              disabled={isQuickAdding}
+              className={primaryButtonClassName}
+            >
+              {isQuickAdding ? "Creating users..." : "Create users from pasted list"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkPasteValue("")}
+              className={secondaryButtonClassName}
+            >
+              Clear pasted data
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
