@@ -204,10 +204,9 @@ async function upsertManagedMembership(input: {
   memberId: string;
   row: ImportedUserRow;
 }) {
-  const planName = input.row.membershipPlan.trim();
   const renewalDate = input.row.membershipEndDate.trim();
 
-  if (!planName || !renewalDate) {
+  if (!renewalDate) {
     return null;
   }
 
@@ -225,23 +224,21 @@ async function upsertManagedMembership(input: {
 
   const startDate = input.row.membershipStartDate.trim() || input.row.joinedOn.trim() || new Date().toISOString().slice(0, 10);
   const nextInvoiceDate = renewalDate;
-  const lastPaymentDate =
-    input.row.paymentStatus === "Paid" ? startDate : "";
+  const planName = "General Membership";
   const payload = {
     id: existingMembership?.id ?? `membership-${crypto.randomUUID()}`,
     member_id: input.memberId,
     plan_name: planName,
-    status: input.row.membershipStatus || "Active",
+    status: "Active",
     start_date: startDate,
     renewal_date: renewalDate,
-    billing_cycle: input.row.billingCycle || "Monthly",
-    amount_inr: input.row.amountInr || 0,
-    payment_status: input.row.paymentStatus || "Pending",
-    last_payment_date: lastPaymentDate || null,
+    billing_cycle: "Monthly",
+    amount_inr: 0,
+    payment_status: "Pending",
+    last_payment_date: null,
     next_invoice_date: nextInvoiceDate || null,
     payment_method: "Cash",
-    outstanding_amount_inr:
-      input.row.paymentStatus === "Paid" ? 0 : input.row.amountInr || 0,
+    outstanding_amount_inr: 0,
   };
 
   const operation = existingMembership?.id
