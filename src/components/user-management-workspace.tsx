@@ -62,6 +62,7 @@ export function UserManagementWorkspace({
   const [isImporting, setIsImporting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRepairing, setIsRepairing] = useState<string | null>(null);
+  const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
@@ -340,10 +341,11 @@ export function UserManagementWorkspace({
     setIsDeleting(null);
   }
 
-  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  async function handleImportUpload() {
+    const file = selectedImportFile;
 
     if (!file) {
+      setStatusMessage("Please select a users Excel file first.");
       return;
     }
 
@@ -377,7 +379,6 @@ export function UserManagementWorkspace({
     if (!response.ok) {
       setStatusMessage(payload.error ?? "Users import failed.");
       setIsImporting(false);
-      event.target.value = "";
       return;
     }
 
@@ -399,8 +400,8 @@ export function UserManagementWorkspace({
           : ""
       }`,
     );
+    setSelectedImportFile(null);
     setIsImporting(false);
-    event.target.value = "";
   }
 
   return (
@@ -426,18 +427,38 @@ export function UserManagementWorkspace({
             >
               Download sample file
             </a>
-            <label className={`${primaryButtonClassName} cursor-pointer`}>
-              {isImporting ? "Importing..." : "Import users Excel"}
+            <label className={`${secondaryButtonClassName} cursor-pointer`}>
+              Choose users Excel
               <input
                 type="file"
                 accept=".xlsx"
                 className="hidden"
-                onChange={handleImport}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  setSelectedImportFile(file);
+                  setStatusMessage(
+                    file ? `Selected file: ${file.name}` : "No file selected.",
+                  );
+                  event.target.value = "";
+                }}
                 disabled={isImporting}
               />
             </label>
+            <button
+              type="button"
+              onClick={handleImportUpload}
+              disabled={isImporting || !selectedImportFile}
+              className={primaryButtonClassName}
+            >
+              {isImporting ? "Importing..." : "Upload selected file"}
+            </button>
           </div>
         </div>
+        {selectedImportFile ? (
+          <p className="mt-4 text-sm text-slate-600">
+            Ready to upload: <span className="font-semibold text-slate-950">{selectedImportFile.name}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
