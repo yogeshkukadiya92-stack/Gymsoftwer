@@ -960,6 +960,45 @@ export async function deleteSupabaseForm(formId: string) {
   return { id: formId };
 }
 
+export async function mergeSupabaseForms(canonicalFormId: string, duplicateFormIds: string[]) {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase || duplicateFormIds.length === 0) {
+    return null;
+  }
+
+  const uniqueDuplicateIds = [...new Set(duplicateFormIds)].filter(
+    (formId) => formId !== canonicalFormId,
+  );
+
+  if (uniqueDuplicateIds.length === 0) {
+    return { canonicalFormId, mergedCount: 0 };
+  }
+
+  const reassignResponses = await supabase
+    .from("intake_form_responses")
+    .update({ form_id: canonicalFormId })
+    .in("form_id", uniqueDuplicateIds);
+
+  if (reassignResponses.error) {
+    throw new Error(reassignResponses.error.message);
+  }
+
+  const deleteForms = await supabase
+    .from("intake_forms")
+    .delete()
+    .in("id", uniqueDuplicateIds);
+
+  if (deleteForms.error) {
+    throw new Error(deleteForms.error.message);
+  }
+
+  return {
+    canonicalFormId,
+    mergedCount: uniqueDuplicateIds.length,
+  };
+}
+
 export async function createSupabaseFormResponse(
   formId: string,
   answers: Record<string, string>,

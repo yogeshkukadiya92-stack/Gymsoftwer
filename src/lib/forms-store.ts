@@ -19,6 +19,7 @@ import {
   createSupabaseFormResponse,
   deleteSupabaseForm,
   getSupabaseFormsStore,
+  mergeSupabaseForms,
   updateSupabaseFormResponseOwnership,
   updateSupabaseForm,
 } from "@/lib/supabase/persistence";
@@ -143,30 +144,55 @@ export async function createOrUpdateExternalIntakeForm(input: {
   seedAnswers?: Record<string, string>;
 }) {
   const store = await getFormsStore();
+  const stableSlug = buildExternalFormSlug({
+    source: input.source,
+    externalFormId: input.externalFormId,
+    title: input.title,
+  });
   const isExternalSource = input.source.trim().toLowerCase() !== "external";
   const sourceDescription = input.externalFormId
     ? `${input.source} form ${input.externalFormId}`
     : `${input.source} form`;
   const normalizedTitle = input.title.trim().toLowerCase();
-  const normalizedSlug = slugifyFormTitle(input.title);
-  const existingExternalMatch = input.externalFormId
-    ? store.forms.find((form) =>
-        form.description
-          .toLowerCase()
-          .includes(`${input.source.toLowerCase()} form ${input.externalFormId}`),
-      )
-    : undefined;
-  const existing =
-    existingExternalMatch ??
-    store.forms.find((form) => {
-      if (isExternalSource || input.externalFormId) {
-        return false;
-      }
+  const matchingForms = store.forms.filter((form) => {
+    if (form.slug === stableSlug) {
+      return true;
+    }
 
-      return (
-        form.title.trim().toLowerCase() === normalizedTitle || form.slug === normalizedSlug
-      );
-    });
+    if (
+      input.externalFormId &&
+      form.description
+        .toLowerCase()
+        .includes(`${input.source.toLowerCase()} form ${input.externalFormId}`.toLowerCase())
+    ) {
+      return true;
+    }
+
+    if (isExternalSource) {
+      return form.title.trim().toLowerCase() === normalizedTitle;
+    }
+
+    return false;
+  });
+  const responseCounts = new Map<string, number>();
+
+  for (const response of store.responses) {
+    responseCounts.set(response.formId, (responseCounts.get(response.formId) ?? 0) + 1);
+  }
+
+  const canonicalExisting =
+    matchingForms
+      .slice()
+      .sort((first, second) => {
+        const countDifference =
+          (responseCounts.get(second.id) ?? 0) - (responseCounts.get(first.id) ?? 0);
+
+        if (countDifference !== 0) {
+          return countDifference;
+        }
+
+        return first.id.localeCompare(second.id);
+      })[0] ?? null;
   const fields =
     input.fields && input.fields.length > 0
       ? input.fields
@@ -174,11 +200,7 @@ export async function createOrUpdateExternalIntakeForm(input: {
         ? buildExternalFieldsFromAnswers(input.seedAnswers)
         : buildDefaultFormFields(input.title.trim() || "External form");
   const normalizedInput: NewIntakeFormInput = {
-    slug: buildExternalFormSlug({
-      source: input.source,
-      externalFormId: input.externalFormId,
-      title: input.title,
-    }),
+    slug: stableSlug,
     title: input.title.trim() || "External form",
     description:
       !input.description?.trim() ||
@@ -190,11 +212,52 @@ export async function createOrUpdateExternalIntakeForm(input: {
     fields,
   };
 
-  if (existing) {
-    return updateIntakeForm(existing.id, normalizedInput);
+  if (canonicalExisting) {
+    const duplicateIds = matchingForms
+      .map((form) => form.id)
+      .filter((formId) => formId !== canonicalExisting.id);
+
+    if (duplicateIds.length > 0) {
+      await mergeDuplicateForms(canonicalExisting.id, duplicateIds);
+    }
+
+    return updateIntakeForm(canonicalExisting.id, normalizedInput);
   }
 
   return createIntakeForm(normalizedInput);
+}
+
+async function mergeDuplicateForms(canonicalFormId: string, duplicateFormIds: string[]) {
+  if (duplicateFormIds.length === 0) {
+    return;
+  }
+
+  const supabaseMerged = await mergeSupabaseForms(canonicalFormId, duplicateFormIds);
+
+  if (supabaseMerged) {
+    return;
+  }
+
+  const store = await readStore();
+  const duplicateSet = new Set(duplicateFormIds.filter((formId) => formId !== canonicalFormId));
+
+  if (duplicateSet.size === 0) {
+    return;
+  }
+
+  const nextStore: FormsStore = {
+    forms: store.forms.filter((form) => !duplicateSet.has(form.id)),
+    responses: store.responses.map((response) =>
+      duplicateSet.has(response.formId)
+        ? {
+            ...response,
+            formId: canonicalFormId,
+          }
+        : response,
+    ),
+  };
+
+  await writeStore(nextStore);
 }
 
 export async function createIntakeForm(input: NewIntakeFormInput) {
