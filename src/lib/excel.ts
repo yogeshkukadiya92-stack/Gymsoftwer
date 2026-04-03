@@ -44,6 +44,13 @@ export type ImportedUserRow = {
   fitnessGoal: string;
   branch: string;
   joinedOn: string;
+  membershipPlan: string;
+  membershipStartDate: string;
+  membershipEndDate: string;
+  membershipStatus: "Active" | "Expiring Soon" | "On Hold";
+  billingCycle: "Monthly" | "Quarterly" | "Yearly";
+  paymentStatus: "Paid" | "Pending" | "Overdue" | "Partially Paid";
+  amountInr: number;
 };
 
 export type ImportedLeadRow = {
@@ -350,6 +357,13 @@ export function buildUsersWorkbook(
     fitness_goal: profile.fitnessGoal,
     branch: profile.branch,
     joined_date: profile.joinedOn,
+    membership_plan: "",
+    membership_start_date: profile.joinedOn,
+    membership_end_date: "",
+    membership_status: "Active",
+    billing_cycle: "Monthly",
+    payment_status: "Pending",
+    amount_inr: 0,
     access_label: options?.accessLabels?.[profile.id] ?? "",
     login_status: options?.loginStatuses?.[profile.id] ?? "",
   }));
@@ -376,6 +390,13 @@ export function buildUsersTemplateWorkbook() {
         fitness_goal: "Operations oversight",
         branch: "Main Branch",
         joined_date: "2026-03-28",
+        membership_plan: "",
+        membership_start_date: "",
+        membership_end_date: "",
+        membership_status: "Active",
+        billing_cycle: "Monthly",
+        payment_status: "Pending",
+        amount_inr: 0,
       },
       {
         id: "",
@@ -388,6 +409,13 @@ export function buildUsersTemplateWorkbook() {
         fitness_goal: "Coach performance",
         branch: "Main Branch",
         joined_date: "2026-03-28",
+        membership_plan: "",
+        membership_start_date: "",
+        membership_end_date: "",
+        membership_status: "Active",
+        billing_cycle: "Monthly",
+        payment_status: "Pending",
+        amount_inr: 0,
       },
       {
         id: "",
@@ -400,6 +428,13 @@ export function buildUsersTemplateWorkbook() {
         fitness_goal: "Weight loss",
         branch: "Main Branch",
         joined_date: "2026-03-28",
+        membership_plan: "Monthly Transformation",
+        membership_start_date: "2026-03-28",
+        membership_end_date: "2026-04-28",
+        membership_status: "Active",
+        billing_cycle: "Monthly",
+        payment_status: "Paid",
+        amount_inr: 2500,
       },
     ]),
     "users",
@@ -1105,6 +1140,13 @@ export function parseUsersWorkbook(buffer: ArrayBuffer) {
       fitnessGoal: toStringValue(item.fitness_goal),
       branch: toStringValue(item.branch),
       joinedOn: toStringValue(item.joined_date || item.joined_on),
+      membershipPlan: toStringValue(item.membership_plan),
+      membershipStartDate: toStringValue(item.membership_start_date || item.joined_date || item.joined_on),
+      membershipEndDate: toStringValue(item.membership_end_date),
+      membershipStatus: (toStringValue(item.membership_status) || "Active") as ImportedUserRow["membershipStatus"],
+      billingCycle: (toStringValue(item.billing_cycle) || "Monthly") as ImportedUserRow["billingCycle"],
+      paymentStatus: (toStringValue(item.payment_status) || "Pending") as ImportedUserRow["paymentStatus"],
+      amountInr: toNumberValue(item.amount_inr),
     } satisfies ImportedUserRow;
   });
 

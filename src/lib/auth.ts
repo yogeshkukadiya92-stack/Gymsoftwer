@@ -200,6 +200,63 @@ export async function createManagedUser(input: {
   };
 }
 
+async function upsertManagedMembership(input: {
+  memberId: string;
+  row: ImportedUserRow;
+}) {
+  const planName = input.row.membershipPlan.trim();
+  const renewalDate = input.row.membershipEndDate.trim();
+
+  if (!planName || !renewalDate) {
+    return null;
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase service role key is required for membership import.");
+  }
+
+  const { data: existingMembership } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("member_id", input.memberId)
+    .maybeSingle();
+
+  const startDate = input.row.membershipStartDate.trim() || input.row.joinedOn.trim() || new Date().toISOString().slice(0, 10);
+  const nextInvoiceDate = renewalDate;
+  const lastPaymentDate =
+    input.row.paymentStatus === "Paid" ? startDate : "";
+  const payload = {
+    id: existingMembership?.id ?? `membership-${crypto.randomUUID()}`,
+    member_id: input.memberId,
+    plan_name: planName,
+    status: input.row.membershipStatus || "Active",
+    start_date: startDate,
+    renewal_date: renewalDate,
+    billing_cycle: input.row.billingCycle || "Monthly",
+    amount_inr: input.row.amountInr || 0,
+    payment_status: input.row.paymentStatus || "Pending",
+    last_payment_date: lastPaymentDate || null,
+    next_invoice_date: nextInvoiceDate || null,
+    payment_method: "Cash",
+    outstanding_amount_inr:
+      input.row.paymentStatus === "Paid" ? 0 : input.row.amountInr || 0,
+  };
+
+  const operation = existingMembership?.id
+    ? supabase.from("memberships").update(payload).eq("id", existingMembership.id)
+    : supabase.from("memberships").insert(payload);
+
+  const { error } = await operation;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return payload.id;
+}
+
 async function findAuthUserByEmail(email: string) {
   const supabase = createSupabaseAdminClient();
 
@@ -400,6 +457,12 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
         fitnessGoal: row.fitnessGoal,
         branch: row.branch,
       });
+      if (row.role === "member") {
+        await upsertManagedMembership({
+          memberId: user.id,
+          row,
+        });
+      }
       updated.push(user);
       continue;
     }
@@ -413,6 +476,12 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
       fitnessGoal: row.fitnessGoal,
       branch: row.branch,
     });
+    if (row.role === "member") {
+      await upsertManagedMembership({
+        memberId: user.id,
+        row,
+      });
+    }
     imported.push(user);
   }
 
