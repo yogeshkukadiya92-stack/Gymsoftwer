@@ -62,10 +62,12 @@ export function UserManagementWorkspace({
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRepairing, setIsRepairing] = useState<string | null>(null);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
   const [bulkPasteValue, setBulkPasteValue] = useState("");
   const [showBulkTools, setShowBulkTools] = useState(true);
   const [showCreateUser, setShowCreateUser] = useState(true);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const showBranchHistory = showCreateUser;
 
@@ -143,6 +145,25 @@ export function UserManagementWorkspace({
       memberships,
     );
   }, [branchVisits, gymBranches, memberships, selectedUser, sessions]);
+  const allFilteredSelected =
+    filteredUsers.length > 0 &&
+    filteredUsers.every((user) => selectedUserIds.includes(user.id));
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUserIds((current) =>
+      current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId],
+    );
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedUserIds((current) =>
+      allFilteredSelected
+        ? current.filter((id) => !filteredUsers.some((user) => user.id === id))
+        : [...new Set([...current, ...filteredUsers.map((user) => user.id)])],
+    );
+  }
 
   function resetForm() {
     setEditingUserId(null);
@@ -489,6 +510,64 @@ export function UserManagementWorkspace({
     setIsQuickAdding(false);
   }
 
+  async function handleBulkVerify() {
+    const targets = users.filter((user) => selectedUserIds.includes(user.id));
+
+    if (targets.length === 0) {
+      setStatusMessage("Select at least one user first.");
+      return;
+    }
+
+    setIsBulkProcessing(true);
+    setStatusMessage("");
+
+    for (const user of targets) {
+      await handleVerifyLogin(user);
+    }
+
+    setStatusMessage(`Verified ${targets.length} selected users.`);
+    setIsBulkProcessing(false);
+  }
+
+  async function handleBulkRepair() {
+    const targets = users.filter((user) => selectedUserIds.includes(user.id));
+
+    if (targets.length === 0) {
+      setStatusMessage("Select at least one user first.");
+      return;
+    }
+
+    setIsBulkProcessing(true);
+    setStatusMessage("");
+
+    for (const user of targets) {
+      await handleRepairLogin(user);
+    }
+
+    setStatusMessage(`Repair flow completed for ${targets.length} selected users.`);
+    setIsBulkProcessing(false);
+  }
+
+  async function handleBulkDelete() {
+    const targets = users.filter((user) => selectedUserIds.includes(user.id));
+
+    if (targets.length === 0) {
+      setStatusMessage("Select at least one user first.");
+      return;
+    }
+
+    setIsBulkProcessing(true);
+    setStatusMessage("");
+
+    for (const user of targets) {
+      await handleDelete(user);
+    }
+
+    setSelectedUserIds([]);
+    setStatusMessage(`Deleted ${targets.length} selected users.`);
+    setIsBulkProcessing(false);
+  }
+
   return (
     <div className="space-y-6">
       <div className={`${panelClassName} flex flex-wrap items-center justify-between gap-3`}>
@@ -750,6 +829,44 @@ export function UserManagementWorkspace({
         <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
         <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3">
+            <div className="text-sm text-slate-600">
+              Selected users: <span className="font-semibold text-slate-950">{selectedUserIds.length}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={toggleSelectAllFiltered}
+                className={secondaryButtonClassName}
+              >
+                {allFilteredSelected ? "Clear page selection" : "Select all on page"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBulkVerify()}
+                disabled={isBulkProcessing || selectedUserIds.length === 0}
+                className={secondaryButtonClassName}
+              >
+                {isBulkProcessing ? "Processing..." : "Verify selected"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBulkRepair()}
+                disabled={isBulkProcessing || selectedUserIds.length === 0}
+                className={secondaryButtonClassName}
+              >
+                {isBulkProcessing ? "Processing..." : "Repair selected"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBulkDelete()}
+                disabled={isBulkProcessing || selectedUserIds.length === 0}
+                className="rounded-full border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isBulkProcessing ? "Processing..." : "Delete selected"}
+              </button>
+            </div>
+          </div>
           <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-3">
             <input
               className={fieldClassName}
@@ -803,6 +920,14 @@ export function UserManagementWorkspace({
             <table className="min-w-[980px] w-full text-left">
               <thead className="bg-slate-950 text-white">
                 <tr className="text-xs uppercase tracking-[0.18em]">
+                  <th className="px-4 py-3 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAllFiltered}
+                      className="h-4 w-4 accent-orange-500"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-semibold">Name</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Phone</th>
@@ -830,6 +955,18 @@ export function UserManagementWorkspace({
                           : "bg-white hover:bg-slate-50"
                       }`}
                     >
+                      <td className="px-4 py-2.5 align-top">
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(user.id)}
+                          onChange={(event) => {
+                            event.stopPropagation();
+                            toggleUserSelection(user.id);
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          className="mt-1 h-4 w-4 accent-orange-500"
+                        />
+                      </td>
                       <td className="px-4 py-2.5 align-top font-medium text-slate-950">
                         <span className="block max-w-[220px] leading-6">{user.fullName}</span>
                       </td>
