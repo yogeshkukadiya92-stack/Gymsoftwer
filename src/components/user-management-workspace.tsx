@@ -5,7 +5,6 @@ import { useMemo, useRef, useState } from "react";
 
 import {
   emptyStateClassName,
-  dangerButtonClassName,
   fieldClassName,
   mutedStatusTextClassName,
   panelClassName,
@@ -830,14 +829,14 @@ export function UserManagementWorkspace({
                       </td>
                       <td className="px-4 py-2.5 align-top text-slate-700 whitespace-nowrap">{user.joinedOn || "-"}</td>
                       <td className="px-4 py-2.5 align-top">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-nowrap gap-1 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleEdit(user);
                             }}
-                            className={secondaryButtonClassName}
+                            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                           >
                             Edit
                           </button>
@@ -848,7 +847,7 @@ export function UserManagementWorkspace({
                               void handleVerifyLogin(user);
                             }}
                             disabled={isVerifying}
-                            className={secondaryButtonClassName}
+                            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Verify
                           </button>
@@ -859,7 +858,7 @@ export function UserManagementWorkspace({
                               void handleRepairLogin(user);
                             }}
                             disabled={isRepairing !== null}
-                            className={secondaryButtonClassName}
+                            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isRepairing === user.id ? "Repairing..." : "Repair"}
                           </button>
@@ -870,7 +869,7 @@ export function UserManagementWorkspace({
                               handleDelete(user);
                             }}
                             disabled={isDeleting === user.id}
-                            className={dangerButtonClassName}
+                            className="rounded-full border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isDeleting === user.id ? "Deleting..." : "Delete"}
                           </button>
