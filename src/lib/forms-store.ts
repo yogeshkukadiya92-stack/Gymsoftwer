@@ -131,6 +131,7 @@ export async function createOrUpdateExternalIntakeForm(input: {
   seedAnswers?: Record<string, string>;
 }) {
   const store = await getFormsStore();
+  const isExternalSource = input.source.trim().toLowerCase() !== "external";
   const sourceDescription = input.externalFormId
     ? `${input.source} form ${input.externalFormId}`
     : `${input.source} form`;
@@ -146,7 +147,7 @@ export async function createOrUpdateExternalIntakeForm(input: {
   const existing =
     existingExternalMatch ??
     store.forms.find((form) => {
-      if (input.externalFormId) {
+      if (isExternalSource || input.externalFormId) {
         return false;
       }
 
@@ -163,8 +164,10 @@ export async function createOrUpdateExternalIntakeForm(input: {
   const normalizedInput: NewIntakeFormInput = {
     title: input.title.trim() || "External form",
     description:
-      input.description?.trim() ||
-      `Imported automatically from ${sourceDescription} submissions.`,
+      !input.description?.trim() ||
+      /^imported from (tally|google forms?) webhook$/i.test(input.description.trim())
+        ? `Imported automatically from ${sourceDescription} submissions.`
+        : input.description.trim(),
     audience: input.audience?.trim() || "External form submissions",
     redirectUrl: input.redirectUrl?.trim() || "",
     fields,
