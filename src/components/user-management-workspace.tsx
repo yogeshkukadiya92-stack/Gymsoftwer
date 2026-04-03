@@ -427,38 +427,39 @@ export function UserManagementWorkspace({
             >
               Download sample file
             </a>
-            <label className={`${secondaryButtonClassName} cursor-pointer`}>
-              Choose users Excel
-              <input
-                type="file"
-                accept=".xlsx"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  setSelectedImportFile(file);
-                  setStatusMessage(
-                    file ? `Selected file: ${file.name}` : "No file selected.",
-                  );
-                  event.target.value = "";
-                }}
-                disabled={isImporting}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleImportUpload}
-              disabled={isImporting || !selectedImportFile}
-              className={primaryButtonClassName}
-            >
-              {isImporting ? "Importing..." : "Upload selected file"}
-            </button>
           </div>
         </div>
-        {selectedImportFile ? (
-          <p className="mt-4 text-sm text-slate-600">
-            Ready to upload: <span className="font-semibold text-slate-950">{selectedImportFile.name}</span>
-          </p>
-        ) : null}
+        <div className="mt-4 grid gap-3 md:grid-cols-[1.4fr_auto] md:items-center">
+          <input
+            type="file"
+            accept=".xlsx"
+            className={fieldClassName}
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              setSelectedImportFile(file);
+              setStatusMessage(file ? `Selected file: ${file.name}` : "No file selected.");
+            }}
+            disabled={isImporting}
+          />
+          <button
+            type="button"
+            onClick={handleImportUpload}
+            disabled={isImporting || !selectedImportFile}
+            className={primaryButtonClassName}
+          >
+            {isImporting ? "Importing..." : "Upload selected file"}
+          </button>
+        </div>
+        <p className="mt-3 text-sm text-slate-600">
+          {selectedImportFile ? (
+            <>
+              Ready to upload:{" "}
+              <span className="font-semibold text-slate-950">{selectedImportFile.name}</span>
+            </>
+          ) : (
+            "Choose a .xlsx users file, then click Upload selected file."
+          )}
+        </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
