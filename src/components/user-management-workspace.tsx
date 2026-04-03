@@ -358,7 +358,15 @@ export function UserManagementWorkspace({
       body: formData,
     });
 
-    const payload = (await response.json()) as {
+    const contentType = response.headers.get("content-type") || "";
+    const payload = (contentType.includes("application/json")
+      ? await response.json()
+      : {
+          error:
+            response.status === 401
+              ? "Admin login required for user import."
+              : "Users import failed.",
+        }) as {
       error?: string;
       message?: string;
       saved?: { imported: number; updated: number };

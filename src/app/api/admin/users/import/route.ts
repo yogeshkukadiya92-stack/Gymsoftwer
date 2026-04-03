@@ -1,8 +1,12 @@
-import { importManagedUsers, requireRole } from "@/lib/auth";
+import { getAuthenticatedProfile, importManagedUsers } from "@/lib/auth";
 import { parseUsersWorkbook } from "@/lib/excel";
 
 export async function POST(request: Request) {
-  await requireRole("admin");
+  const profile = await getAuthenticatedProfile();
+
+  if (!profile || profile.role !== "admin") {
+    return Response.json({ error: "Admin login required for user import." }, { status: 401 });
+  }
 
   const formData = await request.formData();
   const file = formData.get("file");
