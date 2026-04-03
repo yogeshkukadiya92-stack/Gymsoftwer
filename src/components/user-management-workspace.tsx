@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   emptyStateClassName,
@@ -63,6 +63,7 @@ export function UserManagementWorkspace({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRepairing, setIsRepairing] = useState<string | null>(null);
   const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
@@ -342,7 +343,7 @@ export function UserManagementWorkspace({
   }
 
   async function handleImportUpload() {
-    const file = selectedImportFile;
+    const file = selectedImportFile ?? importInputRef.current?.files?.[0] ?? null;
 
     if (!file) {
       setStatusMessage("Please select a users Excel file first.");
@@ -401,6 +402,9 @@ export function UserManagementWorkspace({
       }`,
     );
     setSelectedImportFile(null);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
     setIsImporting(false);
   }
 
@@ -431,6 +435,7 @@ export function UserManagementWorkspace({
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-[1.4fr_auto] md:items-center">
           <input
+            ref={importInputRef}
             type="file"
             accept=".xlsx"
             className={fieldClassName}
