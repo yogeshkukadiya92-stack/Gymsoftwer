@@ -32,6 +32,7 @@ import {
 type FormsWorkspaceProps = {
   initialForms: IntakeForm[];
   initialResponses: IntakeFormResponse[];
+  initialSelectedFormId?: string;
 };
 
 type CreateFormResult = {
@@ -144,13 +145,18 @@ const initialFormState: NewIntakeFormInput = {
 export function FormsWorkspace({
   initialForms,
   initialResponses,
+  initialSelectedFormId,
 }: FormsWorkspaceProps) {
   const [forms, setForms] = useState<IntakeForm[]>(initialForms);
   const [responses, setResponses] = useState<IntakeFormResponse[]>(initialResponses);
   const [searchQuery, setSearchQuery] = useState("");
   const [audienceFilter, setAudienceFilter] = useState("All audiences");
   const [sortBy, setSortBy] = useState<"title" | "responsesHigh" | "audience">("title");
-  const [selectedFormId, setSelectedFormId] = useState(initialForms[0]?.id ?? "");
+  const [selectedFormId, setSelectedFormId] = useState(
+    initialSelectedFormId && initialForms.some((form) => form.id === initialSelectedFormId)
+      ? initialSelectedFormId
+      : (initialForms[0]?.id ?? ""),
+  );
   const [formState, setFormState] = useState<NewIntakeFormInput>(initialFormState);
   const [builderFields, setBuilderFields] = useState<BuilderField[]>(
     initialFields.map(toBuilderField),

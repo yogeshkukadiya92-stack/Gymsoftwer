@@ -6,7 +6,13 @@ import { getAllForms, getAllFormResponses } from "@/lib/forms-store";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminFormsPage() {
+export default async function AdminFormsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ formId?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const initialSelectedFormId = resolvedSearchParams?.formId ?? "";
   const [forms, responses] = await Promise.all([
     getAllForms(),
     getAllFormResponses(),
@@ -19,7 +25,11 @@ export default async function AdminFormsPage() {
       subtitle="Create Google Form style intake pages, share them with clients, and review submitted information."
       navLinks={adminNavLinks}
     >
-      <FormsWorkspace initialForms={forms} initialResponses={responses} />
+      <FormsWorkspace
+        initialForms={forms}
+        initialResponses={responses}
+        initialSelectedFormId={initialSelectedFormId}
+      />
 
       <div className="mt-6">
         <SectionCard eyebrow="Note" title="Current behavior">

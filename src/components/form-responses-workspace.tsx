@@ -655,9 +655,12 @@ export function FormResponsesWorkspace({
           </p>
           {selectedForm ? (
             <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/admin/forms" className={primaryButtonClassName}>
-                Open form editor
-              </Link>
+                <Link
+                  href={`/admin/forms?formId=${selectedForm.id}`}
+                  className={primaryButtonClassName}
+                >
+                  Open form editor
+                </Link>
               <button
                 type="button"
                 onClick={openInlineEditor}
