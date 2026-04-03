@@ -67,6 +67,7 @@ export function UserManagementWorkspace({
   const [showBulkTools, setShowBulkTools] = useState(true);
   const [showCreateUser, setShowCreateUser] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const showBranchHistory = showCreateUser;
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0];
   const filteredUsers = useMemo(() => {
@@ -610,7 +611,13 @@ export function UserManagementWorkspace({
       </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr_0.95fr]">
+      <div
+        className={`grid gap-6 ${
+          showCreateUser
+            ? "xl:grid-cols-[0.9fr_1.1fr_0.95fr]"
+            : "xl:grid-cols-[minmax(0,1fr)]"
+        }`}
+      >
         {showCreateUser ? (
         <form
           onSubmit={handleSubmit}
@@ -743,14 +750,14 @@ export function UserManagementWorkspace({
         <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">Existing users</h3>
         <div className="mt-4 space-y-3">
-          <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-4">
+          <div className="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-3">
             <input
               className={fieldClassName}
               placeholder="Search by name, email, phone, or access label"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={`grid gap-3 ${showCreateUser ? "md:grid-cols-2" : "xl:grid-cols-3"}`}>
               <select
                 className={fieldClassName}
                 value={roleFilter}
@@ -775,22 +782,22 @@ export function UserManagementWorkspace({
                 <option value="reset">Must reset password</option>
                 <option value="not-ready">Login not ready</option>
               </select>
+              <select
+                className={fieldClassName}
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(
+                    event.target.value as "newest" | "oldest" | "name_desc" | "role" | "branch",
+                  )
+                }
+              >
+                <option value="newest">Sort by newest</option>
+                <option value="oldest">Sort by oldest</option>
+                <option value="name_desc">Sort by name</option>
+                <option value="role">Sort by role</option>
+                <option value="branch">Sort by branch</option>
+              </select>
             </div>
-            <select
-              className={fieldClassName}
-              value={sortBy}
-              onChange={(event) =>
-                setSortBy(
-                  event.target.value as "newest" | "oldest" | "name_desc" | "role" | "branch",
-                )
-              }
-            >
-              <option value="newest">Sort by newest</option>
-              <option value="oldest">Sort by oldest</option>
-              <option value="name_desc">Sort by name</option>
-              <option value="role">Sort by role</option>
-              <option value="branch">Sort by branch</option>
-            </select>
           </div>
           <div className="overflow-x-auto rounded-[1.25rem] border border-slate-200 bg-white">
             <table className="min-w-[980px] w-full text-left">
@@ -924,6 +931,7 @@ export function UserManagementWorkspace({
         </div>
       </div>
 
+        {showBranchHistory ? (
         <div className={panelClassName}>
           <h3 className="font-serif text-2xl text-slate-950">User branch history</h3>
           {selectedUser && selectedUserBranchHistory ? (
@@ -1020,6 +1028,7 @@ export function UserManagementWorkspace({
             <p className="mt-4 text-sm text-slate-500">Select a user to view branch activity.</p>
           )}
         </div>
+        ) : null}
       </div>
     </div>
   );
