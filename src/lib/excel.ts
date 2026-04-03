@@ -299,7 +299,7 @@ export function buildMembersWorkbook(profiles: Profile[]) {
       role: profile.role,
       fitness_goal: profile.fitnessGoal,
       branch: profile.branch,
-      joined_on: profile.joinedOn,
+      joined_date: profile.joinedOn,
     }));
 
   XLSX.utils.book_append_sheet(workbook, toJsonSheet(memberRows), "profiles");
@@ -321,7 +321,7 @@ export function buildMembersTemplateWorkbook() {
         role: "member",
         fitness_goal: "Weight loss",
         branch: "Main Branch",
-        joined_on: "2026-03-18",
+        joined_date: "2026-03-18",
       },
     ]),
     "profiles",
@@ -349,7 +349,7 @@ export function buildUsersWorkbook(
     phone: profile.phone,
     fitness_goal: profile.fitnessGoal,
     branch: profile.branch,
-    joined_on: profile.joinedOn,
+    joined_date: profile.joinedOn,
     access_label: options?.accessLabels?.[profile.id] ?? "",
     login_status: options?.loginStatuses?.[profile.id] ?? "",
   }));
@@ -375,7 +375,7 @@ export function buildUsersTemplateWorkbook() {
         phone: "+91 98765 00000",
         fitness_goal: "Operations oversight",
         branch: "Main Branch",
-        joined_on: "2026-03-28",
+        joined_date: "2026-03-28",
       },
       {
         id: "",
@@ -387,7 +387,7 @@ export function buildUsersTemplateWorkbook() {
         phone: "+91 98765 11111",
         fitness_goal: "Coach performance",
         branch: "Main Branch",
-        joined_on: "2026-03-28",
+        joined_date: "2026-03-28",
       },
       {
         id: "",
@@ -399,7 +399,7 @@ export function buildUsersTemplateWorkbook() {
         phone: "+91 98765 22222",
         fitness_goal: "Weight loss",
         branch: "Main Branch",
-        joined_on: "2026-03-28",
+        joined_date: "2026-03-28",
       },
     ]),
     "users",
@@ -1048,7 +1048,7 @@ export function parseMembersWorkbook(buffer: ArrayBuffer) {
       role: (toStringValue(item.role) || "member") as "member" | "trainer" | "admin",
       fitnessGoal: toStringValue(item.fitness_goal),
       branch: toStringValue(item.branch),
-      joinedOn: toStringValue(item.joined_on),
+      joinedOn: toStringValue(item.joined_date || item.joined_on),
     };
   });
 
@@ -1104,7 +1104,7 @@ export function parseUsersWorkbook(buffer: ArrayBuffer) {
       phone: toStringValue(item.phone),
       fitnessGoal: toStringValue(item.fitness_goal),
       branch: toStringValue(item.branch),
-      joinedOn: toStringValue(item.joined_on),
+      joinedOn: toStringValue(item.joined_date || item.joined_on),
     } satisfies ImportedUserRow;
   });
 
