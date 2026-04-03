@@ -43,6 +43,30 @@ function getResponseFieldValue(
   return field ? response.answers[field.id] ?? "" : "";
 }
 
+function buildCountRows(values: string[]) {
+  const counts = new Map<string, number>();
+
+  values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .forEach((value) => {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    });
+
+  return Array.from(counts.entries())
+    .sort(([, left], [, right]) => right - left)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function getWeekKey(dateValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(date);
+  monday.setDate(diff);
+  return monday.toISOString().slice(0, 10);
+}
+
 export function ClassAttendanceWorkspace({
   forms,
   responses,
@@ -112,8 +136,50 @@ export function ClassAttendanceWorkspace({
     latest:
       attendeeRows
         .map((row) => row.submittedAt)
-        .sort((left, right) => right.localeCompare(left))[0] ?? "-",
+      .sort((left, right) => right.localeCompare(left))[0] ?? "-",
   };
+
+  const allAttendanceResponses = responses.filter((response) =>
+    forms.some((form) => form.id === response.formId),
+  );
+  const weeklyRows = Array.from(
+    allAttendanceResponses.reduce((map, response) => {
+      const [datePart = ""] = response.submittedAt.split(" ");
+      const weekKey = datePart ? getWeekKey(datePart) : "Unknown";
+      map.set(weekKey, (map.get(weekKey) ?? 0) + 1);
+      return map;
+    }, new Map<string, number>()),
+  )
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([week, count]) => ({ week, count }));
+  const dailyRows = Array.from(
+    allAttendanceResponses.reduce((map, response) => {
+      const [datePart = ""] = response.submittedAt.split(" ");
+      map.set(datePart || "Unknown", (map.get(datePart || "Unknown") ?? 0) + 1);
+      return map;
+    }, new Map<string, number>()),
+  )
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-10)
+    .map(([date, count]) => ({ date, count }));
+  const topForms = forms
+    .map((form) => ({
+      id: form.id,
+      title: form.title,
+      count: responses.filter((response) => response.formId === form.id).length,
+    }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 5);
+  const countryRows = buildCountRows(
+    allAttendanceResponses.map((response) => response.metadata?.country || "Unknown"),
+  ).slice(0, 5);
+  const deviceRows = buildCountRows(
+    allAttendanceResponses.map((response) => response.metadata?.deviceType || "Unknown"),
+  ).slice(0, 5);
+  const maxWeeklyCount = Math.max(...weeklyRows.map((row) => row.count), 1);
+  const maxDailyCount = Math.max(...dailyRows.map((row) => row.count), 1);
+  const totalMatchedResponses = allAttendanceResponses.filter((response) => response.memberId).length;
+  const totalUnmatchedResponses = allAttendanceResponses.length - totalMatchedResponses;
 
   return (
     <div className="space-y-6">
@@ -300,6 +366,152 @@ export function ClassAttendanceWorkspace({
           </div>
         </section>
       </div>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(7,24,39,0.08)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
+          Attendance reports
+        </p>
+        <h2 className="mt-2 font-serif text-2xl text-slate-950">
+          Weekly participation and attendance analysis
+        </h2>
+        <p className="mt-2 text-slate-600">
+          Review overall participation, trends, top attendance forms, and device or location patterns from submitted attendance forms.
+        </p>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <div className="rounded-[1.5rem] bg-slate-950 p-4 text-white">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Total attendance</p>
+            <p className="mt-3 text-3xl font-semibold">{allAttendanceResponses.length}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-emerald-50 p-4 text-emerald-800">
+            <p className="text-sm uppercase tracking-[0.24em] text-emerald-600">Matched users</p>
+            <p className="mt-3 text-3xl font-semibold">{totalMatchedResponses}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-amber-50 p-4 text-amber-800">
+            <p className="text-sm uppercase tracking-[0.24em] text-amber-600">Unmatched</p>
+            <p className="mt-3 text-3xl font-semibold">{totalUnmatchedResponses}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-slate-50 p-4 text-slate-900">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Attendance forms</p>
+            <p className="mt-3 text-3xl font-semibold">{forms.length}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Weekly participation</h3>
+            <div className="mt-4 space-y-3">
+              {weeklyRows.length > 0 ? (
+                weeklyRows.map((row) => (
+                  <div key={row.week}>
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                      <span>Week of {row.week}</span>
+                      <span className="font-semibold">{row.count}</span>
+                    </div>
+                    <div className="mt-2 h-3 rounded-full bg-slate-100">
+                      <div
+                        className="h-3 rounded-full bg-slate-950"
+                        style={{ width: `${(row.count / maxWeeklyCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Weekly attendance data will appear here once submissions are available.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Last 10 days trend</h3>
+            <div className="mt-4 space-y-3">
+              {dailyRows.length > 0 ? (
+                dailyRows.map((row) => (
+                  <div key={row.date}>
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                      <span>{row.date}</span>
+                      <span className="font-semibold">{row.count}</span>
+                    </div>
+                    <div className="mt-2 h-3 rounded-full bg-orange-100">
+                      <div
+                        className="h-3 rounded-full bg-orange-500"
+                        style={{ width: `${(row.count / maxDailyCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Daily participation trend will appear here once submissions are available.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-3">
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Top attendance forms</h3>
+            <div className="mt-4 space-y-3">
+              {topForms.map((form) => (
+                <div
+                  key={form.id}
+                  className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3"
+                >
+                  <span className="text-sm font-medium text-slate-900">{form.title}</span>
+                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                    {form.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Country breakdown</h3>
+            <div className="mt-4 space-y-3">
+              {countryRows.length > 0 ? (
+                countryRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-slate-900">{row.label}</span>
+                    <span className="text-sm font-semibold text-slate-700">{row.count}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Country-level response data is not available yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Device breakdown</h3>
+            <div className="mt-4 space-y-3">
+              {deviceRows.length > 0 ? (
+                deviceRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-slate-900">{row.label}</span>
+                    <span className="text-sm font-semibold text-slate-700">{row.count}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Device-level response data is not available yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
