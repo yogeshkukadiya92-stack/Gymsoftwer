@@ -134,11 +134,26 @@ export async function createOrUpdateExternalIntakeForm(input: {
   const sourceDescription = input.externalFormId
     ? `${input.source} form ${input.externalFormId}`
     : `${input.source} form`;
-  const existing = store.forms.find(
-    (form) =>
-      form.title.trim().toLowerCase() === input.title.trim().toLowerCase() ||
-      form.slug === slugifyFormTitle(input.title),
-  );
+  const normalizedTitle = input.title.trim().toLowerCase();
+  const normalizedSlug = slugifyFormTitle(input.title);
+  const existingExternalMatch = input.externalFormId
+    ? store.forms.find((form) =>
+        form.description
+          .toLowerCase()
+          .includes(`${input.source.toLowerCase()} form ${input.externalFormId}`),
+      )
+    : undefined;
+  const existing =
+    existingExternalMatch ??
+    store.forms.find((form) => {
+      if (input.externalFormId) {
+        return false;
+      }
+
+      return (
+        form.title.trim().toLowerCase() === normalizedTitle || form.slug === normalizedSlug
+      );
+    });
   const fields =
     input.fields && input.fields.length > 0
       ? input.fields

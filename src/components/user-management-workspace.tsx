@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import {
@@ -752,6 +753,16 @@ export function UserManagementWorkspace({
                     </p>
                   </div>
                 </div>
+                {selectedUser.role === "member" ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link
+                      href={`/admin/diet-planner?userId=${selectedUser.id}`}
+                      className={secondaryButtonClassName}
+                    >
+                      Create diet plan
+                    </Link>
+                  </div>
+                ) : null}
                 <p className="mt-4 text-sm text-slate-500">
                   Membership: {selectedUserBranchHistory.activeMembershipStatus}
                 </p>

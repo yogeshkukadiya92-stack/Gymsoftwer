@@ -21,6 +21,7 @@ export type LeadRecord = {
 
 export type DietPlanRecord = {
   id: string;
+  memberId?: string;
   memberName: string;
   coach: string;
   goal: string;
@@ -108,6 +109,7 @@ export const starterLeads: LeadRecord[] = [
 export const starterDietPlans: DietPlanRecord[] = [
   {
     id: "diet-1",
+    memberId: "member-1",
     memberName: "Aarav Mehta",
     coach: "Naina Kapoor",
     goal: "Lean muscle gain",
@@ -136,6 +138,7 @@ export const starterDietPlans: DietPlanRecord[] = [
   },
   {
     id: "diet-2",
+    memberId: "member-2",
     memberName: "Diya Patel",
     coach: "Yogesh Kukadiya",
     goal: "Fat loss and consistency",
@@ -164,6 +167,7 @@ export const starterDietPlans: DietPlanRecord[] = [
   },
   {
     id: "diet-3",
+    memberId: "member-3",
     memberName: "Kabir Shah",
     coach: "Naina Kapoor",
     goal: "Mobility and core strength",

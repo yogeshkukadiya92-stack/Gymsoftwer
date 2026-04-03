@@ -20,6 +20,7 @@ function normalizeMeals(meals: MealInput[] | undefined) {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
+    memberId?: string;
     memberName?: string;
     coach?: string;
     goal?: string;
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
   }
 
   const plan = await createDietPlan({
+    memberId: body.memberId?.trim() || undefined,
     memberName: body.memberName.trim(),
     coach: body.coach?.trim() ?? "",
     goal: body.goal.trim(),
@@ -54,6 +56,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const body = (await request.json()) as {
     id?: string;
+    memberId?: string;
     memberName?: string;
     coach?: string;
     goal?: string;
@@ -73,6 +76,7 @@ export async function PUT(request: Request) {
 
   try {
     const plan = await updateDietPlan(body.id, {
+      memberId: body.memberId?.trim() || undefined,
       memberName: body.memberName.trim(),
       coach: body.coach?.trim() ?? "",
       goal: body.goal.trim(),

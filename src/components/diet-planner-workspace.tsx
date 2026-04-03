@@ -1,15 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { DietPlanRecord } from "@/lib/business-data";
+import { Profile } from "@/lib/types";
 
 type DietPlannerWorkspaceProps = {
   plans: DietPlanRecord[];
+  members: Profile[];
+  prefillMemberId?: string;
 };
 
-const emptyForm = {
+const baseEmptyForm = {
   id: "",
+  memberId: "",
   memberName: "",
   coach: "",
   goal: "",
@@ -21,14 +26,27 @@ const emptyForm = {
   mealItems: ["", "", "", ""],
 };
 
-export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspaceProps) {
+function createEmptyForm(prefillMember?: Profile | null) {
+  return {
+    ...baseEmptyForm,
+    memberId: prefillMember?.id ?? "",
+    memberName: prefillMember?.fullName ?? "",
+  };
+}
+
+export function DietPlannerWorkspace({
+  plans: initialPlans,
+  members,
+  prefillMemberId = "",
+}: DietPlannerWorkspaceProps) {
+  const prefillMember = members.find((member) => member.id === prefillMemberId) ?? null;
   const [plans, setPlans] = useState(initialPlans);
   const [query, setQuery] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState(initialPlans[0]?.id ?? "");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [formState, setFormState] = useState(emptyForm);
+  const [formState, setFormState] = useState(() => createEmptyForm(prefillMember));
 
   const filteredPlans = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -47,14 +65,37 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
 
   const selectedPlan =
     filteredPlans.find((plan) => plan.id === selectedPlanId) ?? filteredPlans[0] ?? null;
+  const selectedPlanMember = selectedPlan?.memberId
+    ? members.find((member) => member.id === selectedPlan.memberId)
+    : members.find((member) => member.fullName === selectedPlan?.memberName);
+
+  const whatsappShareUrl = useMemo(() => {
+    const phone = selectedPlanMember?.phone?.replace(/[^\d]/g, "") ?? "";
+
+    if (!selectedPlan || !phone) {
+      return "";
+    }
+
+    const message = [
+      `Diet plan for ${selectedPlan.memberName}`,
+      `Goal: ${selectedPlan.goal}`,
+      `Calories: ${selectedPlan.calories}`,
+      `Protein: ${selectedPlan.proteinGrams}g`,
+      "",
+      ...selectedPlan.meals.map((meal) => `${meal.title}: ${meal.items.join(", ")}`),
+    ].join("\n");
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  }, [selectedPlan, selectedPlanMember]);
 
   function resetForm() {
-    setFormState(emptyForm);
+    setFormState(createEmptyForm(prefillMember));
   }
 
   function populateForm(plan: DietPlanRecord) {
     setFormState({
       id: plan.id,
+      memberId: plan.memberId ?? "",
       memberName: plan.memberName,
       coach: plan.coach,
       goal: plan.goal,
@@ -97,6 +138,7 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
       },
       body: JSON.stringify({
         id: formState.id,
+        memberId: formState.memberId,
         memberName: formState.memberName,
         coach: formState.coach,
         goal: formState.goal,
@@ -126,7 +168,9 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
         : [payload.plan!, ...current],
     );
     setSelectedPlanId(payload.plan.id);
-    setStatusMessage(payload.message ?? (formState.id ? "Diet plan updated." : "Diet plan created."));
+    setStatusMessage(
+      payload.message ?? (formState.id ? "Diet plan updated." : "Diet plan created."),
+    );
     resetForm();
     setIsSubmitting(false);
   }
@@ -183,50 +227,84 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
           ) : null}
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <select
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm lg:col-span-2"
+            value={formState.memberId}
+            onChange={(event) => {
+              const member = members.find((item) => item.id === event.target.value);
+
+              setFormState((current) => ({
+                ...current,
+                memberId: event.target.value,
+                memberName: member?.fullName ?? current.memberName,
+              }));
+            }}
+          >
+            <option value="">Select member</option>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.fullName} {member.phone ? `- ${member.phone}` : ""}
+              </option>
+            ))}
+          </select>
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             placeholder="Member name"
             value={formState.memberName}
-            onChange={(event) => setFormState((current) => ({ ...current, memberName: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, memberName: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             placeholder="Coach"
             value={formState.coach}
-            onChange={(event) => setFormState((current) => ({ ...current, coach: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, coach: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm lg:col-span-2"
             placeholder="Goal"
             value={formState.goal}
-            onChange={(event) => setFormState((current) => ({ ...current, goal: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, goal: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             placeholder="Calories"
             type="number"
             value={formState.calories}
-            onChange={(event) => setFormState((current) => ({ ...current, calories: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, calories: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             placeholder="Protein grams"
             type="number"
             value={formState.proteinGrams}
-            onChange={(event) => setFormState((current) => ({ ...current, proteinGrams: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, proteinGrams: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             placeholder="Adherence"
             type="number"
             value={formState.adherence}
-            onChange={(event) => setFormState((current) => ({ ...current, adherence: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, adherence: event.target.value }))
+            }
           />
           <input
             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm"
             type="date"
             value={formState.updatedOn}
-            onChange={(event) => setFormState((current) => ({ ...current, updatedOn: event.target.value }))}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, updatedOn: event.target.value }))
+            }
           />
           {formState.mealTitles.map((title, index) => (
             <div key={`${title}-${index}`} className="rounded-[1.25rem] bg-slate-50 p-4 lg:col-span-2">
@@ -290,7 +368,11 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
                   : "border-slate-200 bg-white hover:border-orange-200"
               }`}
             >
-              <button type="button" onClick={() => setSelectedPlanId(plan.id)} className="w-full text-left">
+              <button
+                type="button"
+                onClick={() => setSelectedPlanId(plan.id)}
+                className="w-full text-left"
+              >
                 <p className="font-semibold text-slate-950">{plan.memberName}</p>
                 <p className="mt-1 text-sm text-slate-600">{plan.goal}</p>
                 <p className="mt-2 text-sm text-slate-500">
@@ -324,7 +406,9 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600">
                 Diet overview
               </p>
-              <h2 className="mt-2 font-serif text-3xl text-slate-950">{selectedPlan.memberName}</h2>
+              <h2 className="mt-2 font-serif text-3xl text-slate-950">
+                {selectedPlan.memberName}
+              </h2>
               <p className="mt-2 text-slate-600">
                 {selectedPlan.goal} • Coach: {selectedPlan.coach}
               </p>
@@ -355,6 +439,42 @@ export function DietPlannerWorkspace({ plans: initialPlans }: DietPlannerWorkspa
                     </ul>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {selectedPlanMember ? (
+                  <Link
+                    href={`/admin/users?userId=${selectedPlanMember.id}`}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                  >
+                    Open user
+                  </Link>
+                ) : null}
+                {whatsappShareUrl ? (
+                  <a
+                    href={whatsappShareUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Share on WhatsApp
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400"
+                  >
+                    No WhatsApp number
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                >
+                  Print plan
+                </button>
               </div>
             </>
           ) : (

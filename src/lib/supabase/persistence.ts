@@ -313,6 +313,7 @@ function mapDietPlanRow(row: Record<string, unknown>): DietPlanRecord {
 
   return {
     id: String(row.id ?? ""),
+    memberId: row.member_id ? String(row.member_id) : undefined,
     memberName: String(row.member_name ?? ""),
     coach: String(row.coach ?? ""),
     goal: String(row.goal ?? ""),
@@ -1522,7 +1523,7 @@ export async function createSupabaseDietPlan(input: Omit<DietPlanRecord, "id">) 
   }
 
   const plan: DietPlanRecord = { id: `diet-${crypto.randomUUID()}`, ...input };
-  const { error } = await supabase.from("diet_plans").insert({
+  const basePayload = {
     id: plan.id,
     member_name: plan.memberName,
     coach: plan.coach,
@@ -1532,7 +1533,17 @@ export async function createSupabaseDietPlan(input: Omit<DietPlanRecord, "id">) 
     meals: plan.meals,
     adherence: plan.adherence,
     updated_on: plan.updatedOn,
+  };
+
+  const firstAttempt = await supabase.from("diet_plans").insert({
+    ...basePayload,
+    member_id: plan.memberId ?? null,
   });
+
+  const error =
+    firstAttempt.error && isMissingColumnError(firstAttempt.error.message, "member_id")
+      ? (await supabase.from("diet_plans").insert(basePayload)).error
+      : firstAttempt.error;
 
   if (error) {
     throw new Error(error.message);
@@ -1548,19 +1559,29 @@ export async function updateSupabaseDietPlan(id: string, input: Omit<DietPlanRec
   }
 
   const plan: DietPlanRecord = { id, ...input };
-  const { error } = await supabase
+  const basePayload = {
+    member_name: plan.memberName,
+    coach: plan.coach,
+    goal: plan.goal,
+    calories: plan.calories,
+    protein_grams: plan.proteinGrams,
+    meals: plan.meals,
+    adherence: plan.adherence,
+    updated_on: plan.updatedOn,
+  };
+
+  const firstAttempt = await supabase
     .from("diet_plans")
     .update({
-      member_name: plan.memberName,
-      coach: plan.coach,
-      goal: plan.goal,
-      calories: plan.calories,
-      protein_grams: plan.proteinGrams,
-      meals: plan.meals,
-      adherence: plan.adherence,
-      updated_on: plan.updatedOn,
+      ...basePayload,
+      member_id: plan.memberId ?? null,
     })
     .eq("id", id);
+
+  const error =
+    firstAttempt.error && isMissingColumnError(firstAttempt.error.message, "member_id")
+      ? (await supabase.from("diet_plans").update(basePayload).eq("id", id)).error
+      : firstAttempt.error;
 
   if (error) {
     throw new Error(error.message);

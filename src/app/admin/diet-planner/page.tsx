@@ -3,10 +3,17 @@ import { DietPlannerWorkspace } from "@/components/diet-planner-workspace";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { adminNavLinks } from "@/lib/admin-nav";
+import { getAppData } from "@/lib/data";
 import { getDietPlans } from "@/lib/business-data-store";
 
-export default async function AdminDietPlannerPage() {
-  const starterDietPlans = await getDietPlans();
+export default async function AdminDietPlannerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ userId?: string }>;
+}) {
+  const params = await searchParams;
+  const [starterDietPlans, data] = await Promise.all([getDietPlans(), getAppData()]);
+  const members = data.profiles.filter((profile) => profile.role === "member");
   const avgAdherence =
     starterDietPlans.length > 0
       ? starterDietPlans.reduce((sum, plan) => sum + plan.adherence, 0) / starterDietPlans.length
@@ -28,7 +35,11 @@ export default async function AdminDietPlannerPage() {
 
       <div className="mt-6">
         <SectionCard eyebrow="Meals" title="Member diet plans">
-          <DietPlannerWorkspace plans={starterDietPlans} />
+          <DietPlannerWorkspace
+            plans={starterDietPlans}
+            members={members}
+            prefillMemberId={params.userId ?? ""}
+          />
         </SectionCard>
       </div>
     </AppShell>
