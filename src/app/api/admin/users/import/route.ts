@@ -26,7 +26,9 @@ export async function POST(request: Request) {
       saved: {
         imported: saved.imported.length,
         updated: saved.updated.length,
+        failed: saved.failed.length,
       },
+      failedRows: saved.failed.slice(0, 10),
       sampleUsers: parsed.users.slice(0, 5).map((user) => ({
         fullName: user.fullName,
         email: user.email,

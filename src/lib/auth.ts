@@ -436,16 +436,37 @@ export async function deleteManagedUser(input: { id: string; email: string }) {
 export async function importManagedUsers(rows: ImportedUserRow[]) {
   const imported: Array<{ id: string; email: string; role: UserRole }> = [];
   const updated: Array<{ id: string; email: string; role: UserRole }> = [];
+  const failed: Array<{ email: string; reason: string }> = [];
 
   for (const row of rows) {
-    const lookupEmail = row.currentEmail || row.email;
-    const existingAuthUser = lookupEmail ? await findAuthUserByEmail(lookupEmail) : null;
-    const existingProfile = lookupEmail ? await findProfileByEmail(lookupEmail) : null;
+    try {
+      const lookupEmail = row.currentEmail || row.email;
+      const existingAuthUser = lookupEmail ? await findAuthUserByEmail(lookupEmail) : null;
+      const existingProfile = lookupEmail ? await findProfileByEmail(lookupEmail) : null;
 
-    if (row.id || existingAuthUser || row.currentEmail.trim() || existingProfile?.id) {
-      const user = await updateManagedUser({
-        id: row.id || String(existingProfile?.id ?? ""),
-        currentEmail: lookupEmail,
+      if (row.id || existingAuthUser || row.currentEmail.trim() || existingProfile?.id) {
+        const user = await updateManagedUser({
+          id: row.id || String(existingProfile?.id ?? ""),
+          currentEmail: lookupEmail,
+          fullName: row.fullName,
+          email: row.email,
+          password: row.password,
+          role: row.role,
+          phone: row.phone,
+          fitnessGoal: row.fitnessGoal,
+          branch: row.branch,
+        });
+        if (row.role === "member") {
+          await upsertManagedMembership({
+            memberId: user.id,
+            row,
+          });
+        }
+        updated.push(user);
+        continue;
+      }
+
+      const user = await createManagedUser({
         fullName: row.fullName,
         email: row.email,
         password: row.password,
@@ -460,31 +481,19 @@ export async function importManagedUsers(rows: ImportedUserRow[]) {
           row,
         });
       }
-      updated.push(user);
-      continue;
-    }
-
-    const user = await createManagedUser({
-      fullName: row.fullName,
-      email: row.email,
-      password: row.password,
-      role: row.role,
-      phone: row.phone,
-      fitnessGoal: row.fitnessGoal,
-      branch: row.branch,
-    });
-    if (row.role === "member") {
-      await upsertManagedMembership({
-        memberId: user.id,
-        row,
+      imported.push(user);
+    } catch (error) {
+      failed.push({
+        email: row.email,
+        reason: error instanceof Error ? error.message : "Unknown import error",
       });
     }
-    imported.push(user);
   }
 
   return {
     imported,
     updated,
+    failed,
   };
 }
 

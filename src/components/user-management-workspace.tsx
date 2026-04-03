@@ -369,8 +369,9 @@ export function UserManagementWorkspace({
         }) as {
       error?: string;
       message?: string;
-      saved?: { imported: number; updated: number };
+      saved?: { imported: number; updated: number; failed?: number };
       duplicateEmails?: string[];
+      failedRows?: Array<{ email: string; reason: string }>;
     };
 
     if (!response.ok) {
@@ -383,8 +384,18 @@ export function UserManagementWorkspace({
     await refreshUsers();
     setStatusMessage(
       `${payload.message ?? "Users imported."} Imported: ${payload.saved?.imported ?? 0}, updated: ${payload.saved?.updated ?? 0}${
+        payload.saved?.failed
+          ? `, failed: ${payload.saved.failed}`
+          : ""
+      }${
         payload.duplicateEmails?.length
           ? `, duplicate emails in file: ${payload.duplicateEmails.join(", ")}`
+          : ""
+      }${
+        payload.failedRows?.length
+          ? `. Issues: ${payload.failedRows
+              .map((row) => `${row.email || "unknown"} (${row.reason})`)
+              .join("; ")}`
           : ""
       }`,
     );
