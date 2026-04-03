@@ -71,6 +71,11 @@ function getWeekKey(dateValue: string) {
   return monday.toISOString().slice(0, 10);
 }
 
+function getWeekdayLabel(dateValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  return date.toLocaleDateString("en-IN", { weekday: "short" });
+}
+
 export function ClassAttendanceWorkspace({
   forms,
   responses,
@@ -221,15 +226,77 @@ export function ClassAttendanceWorkspace({
     }))
     .filter((item) => item.count > 0)
     .sort((left, right) => right.count - left.count);
+  const rangeParticipantMap = new Map<
+    string,
+    { label: string; count: number; matched: boolean; phone: string; email: string }
+  >();
+
+  rangeResponses.forEach((response) => {
+    const form = forms.find((item) => item.id === response.formId);
+    if (!form) {
+      return;
+    }
+
+    const matchedMember = response.memberId
+      ? members.find((member) => member.id === response.memberId)
+      : undefined;
+    const label =
+      matchedMember?.fullName ||
+      getResponseFieldValue(form, response, {
+        labelPattern: /full\s*name|name/i,
+      }) ||
+      response.respondentPhone ||
+      "Unknown participant";
+    const key = response.memberId || response.respondentPhone || `${form.id}-${response.id}`;
+
+    rangeParticipantMap.set(key, {
+      label,
+      count: (rangeParticipantMap.get(key)?.count ?? 0) + 1,
+      matched: Boolean(response.memberId),
+      phone:
+        matchedMember?.phone ||
+        response.respondentPhone ||
+        getResponseFieldValue(form, response, { type: "phone" }) ||
+        "-",
+      email:
+        matchedMember?.email ||
+        getResponseFieldValue(form, response, { type: "email" }) ||
+        "-",
+    });
+  });
+
+  const topParticipants = Array.from(rangeParticipantMap.values())
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 8);
+  const repeatParticipants = Array.from(rangeParticipantMap.values()).filter(
+    (entry) => entry.count > 1,
+  ).length;
+  const oneTimeParticipants = Array.from(rangeParticipantMap.values()).filter(
+    (entry) => entry.count === 1,
+  ).length;
+  const nonParticipants = Math.max(totalMembers - rangeParticipants, 0);
+  const participationByWeekday = buildCountRows(
+    rangeResponses.map((response) => {
+      const [datePart = ""] = response.submittedAt.split(" ");
+      return datePart ? getWeekdayLabel(datePart) : "Unknown";
+    }),
+  );
+  const avgFormsPerParticipant =
+    rangeParticipants > 0 ? (rangeResponses.length / rangeParticipants).toFixed(1) : "0.0";
+  const matchedParticipationRate =
+    totalMembers > 0 ? Math.round((rangeUniqueMembers.size / totalMembers) * 100) : 0;
   const shareableWeeklySummaryLines = [
     "Attendance summary",
     `From: ${filters.summaryFrom || "-"}`,
     `To: ${filters.summaryTo || "-"}`,
     `Total users: ${totalMembers}`,
     `Participants from total users: ${rangeParticipants}/${totalMembers} (${participationRate}%)`,
+    `Non-participants: ${nonParticipants}`,
     `Total attendance form submissions: ${rangeResponses.length}`,
     `Estimated total participants: ${rangeParticipants}`,
     `Matched users: ${rangeResponses.filter((response) => response.memberId).length}`,
+    `Repeat participants: ${repeatParticipants}`,
+    `Average forms per participant: ${avgFormsPerParticipant}`,
   ];
 
   if (rangeFormBreakdown.length > 0) {
@@ -547,6 +614,26 @@ export function ClassAttendanceWorkspace({
           </div>
         </div>
 
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-[1.5rem] bg-white p-4 ring-1 ring-slate-200">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Repeat participants</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-950">{repeatParticipants}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-white p-4 ring-1 ring-slate-200">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">One-time participants</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-950">{oneTimeParticipants}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-white p-4 ring-1 ring-slate-200">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Non-participants</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-950">{nonParticipants}</p>
+          </div>
+          <div className="rounded-[1.5rem] bg-white p-4 ring-1 ring-slate-200">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Avg forms per participant</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-950">{avgFormsPerParticipant}</p>
+            <p className="mt-1 text-sm text-slate-500">{matchedParticipationRate}% matched member participation</p>
+          </div>
+        </div>
+
         <div className="mt-6 grid gap-6 xl:grid-cols-2">
           <div className="rounded-[1.5rem] border border-slate-200 p-5">
             <h3 className="font-serif text-xl text-slate-950">Weekly participation</h3>
@@ -656,6 +743,63 @@ export function ClassAttendanceWorkspace({
               ) : (
                 <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
                   Device-level response data is not available yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Top participants</h3>
+            <div className="mt-4 space-y-3">
+              {topParticipants.length > 0 ? (
+                topParticipants.map((participant) => (
+                  <div
+                    key={`${participant.label}-${participant.phone}`}
+                    className="rounded-[1.25rem] bg-slate-50 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-950">{participant.label}</p>
+                        <p className="mt-1 text-sm text-slate-500">{participant.phone}</p>
+                        <p className="mt-1 text-sm text-slate-500">{participant.email}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                          {participant.count} forms
+                        </span>
+                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                          {participant.matched ? "Matched" : "Unmatched"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Top participants will appear here once enough attendance responses are available.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 p-5">
+            <h3 className="font-serif text-xl text-slate-950">Participation by weekday</h3>
+            <div className="mt-4 space-y-3">
+              {participationByWeekday.length > 0 ? (
+                participationByWeekday.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-slate-900">{row.label}</span>
+                    <span className="text-sm font-semibold text-slate-700">{row.count}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Weekday participation data will appear here once attendance responses are available.
                 </div>
               )}
             </div>
