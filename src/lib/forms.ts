@@ -178,6 +178,7 @@ export type FormsStore = {
 };
 
 export type NewIntakeFormInput = {
+  slug?: string;
   title: string;
   description: string;
   audience: string;

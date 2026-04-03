@@ -120,6 +120,18 @@ function buildExternalFieldsFromAnswers(answers: Record<string, string>) {
   })) satisfies IntakeFormField[];
 }
 
+function buildExternalFormSlug(input: { source: string; externalFormId?: string; title: string }) {
+  const externalIdPart = input.externalFormId
+    ? input.externalFormId.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    : "";
+  const sourcePart = sanitizeExternalFieldId(input.source) || "external";
+  const titlePart = slugifyFormTitle(input.title) || "form";
+
+  return externalIdPart
+    ? `${sourcePart}-${externalIdPart}`
+    : `${sourcePart}-${titlePart}`;
+}
+
 export async function createOrUpdateExternalIntakeForm(input: {
   source: string;
   externalFormId?: string;
@@ -162,6 +174,11 @@ export async function createOrUpdateExternalIntakeForm(input: {
         ? buildExternalFieldsFromAnswers(input.seedAnswers)
         : buildDefaultFormFields(input.title.trim() || "External form");
   const normalizedInput: NewIntakeFormInput = {
+    slug: buildExternalFormSlug({
+      source: input.source,
+      externalFormId: input.externalFormId,
+      title: input.title,
+    }),
     title: input.title.trim() || "External form",
     description:
       !input.description?.trim() ||
@@ -188,8 +205,16 @@ export async function createIntakeForm(input: NewIntakeFormInput) {
   }
 
   const store = await readStore();
-  const baseSlug = slugifyFormTitle(input.title);
+  const baseSlug = input.slug?.trim() || slugifyFormTitle(input.title);
   const existingSlugs = new Set(store.forms.map((form) => form.slug));
+
+  if (input.slug?.trim()) {
+    const existingBySlug = store.forms.find((form) => form.slug === input.slug?.trim());
+
+    if (existingBySlug) {
+      return existingBySlug;
+    }
+  }
 
   let slug = baseSlug || "untitled-form";
   let suffix = 2;

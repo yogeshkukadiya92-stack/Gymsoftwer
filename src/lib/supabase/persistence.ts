@@ -798,12 +798,20 @@ export async function createSupabaseForm(input: NewIntakeFormInput) {
   }
 
   const existingForms = await getSupabaseFormsStore();
+  const preferredSlug = input.slug?.trim();
   const existingSlugs = new Set(existingForms?.forms.map((form) => form.slug) ?? []);
-  const baseSlug = slugifyFormTitle(input.title);
+  const baseSlug = preferredSlug || slugifyFormTitle(input.title);
   let slug = baseSlug || "untitled-form";
   let suffix = 2;
 
-  while (existingSlugs.has(slug)) {
+  if (preferredSlug && existingSlugs.has(preferredSlug)) {
+    const existingBySlug = existingForms?.forms.find((form) => form.slug === preferredSlug) ?? null;
+    if (existingBySlug) {
+      return existingBySlug;
+    }
+  }
+
+  while (!preferredSlug && existingSlugs.has(slug)) {
     slug = `${baseSlug || "untitled-form"}-${suffix}`;
     suffix += 1;
   }
@@ -843,6 +851,12 @@ export async function createSupabaseForm(input: NewIntakeFormInput) {
       : firstAttempt.error;
 
   if (error) {
+    if (preferredSlug && /duplicate key value|unique constraint/i.test(error.message)) {
+      const existingBySlug = existingForms?.forms.find((form) => form.slug === preferredSlug) ?? null;
+      if (existingBySlug) {
+        return existingBySlug;
+      }
+    }
     throw new Error(error.message);
   }
 
