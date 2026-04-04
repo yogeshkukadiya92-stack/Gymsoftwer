@@ -1,3 +1,4 @@
+import { IntakeFormField } from "@/lib/forms";
 import { createFormResponse, createOrUpdateExternalIntakeForm } from "@/lib/forms-store";
 import { validateIntegrationApiKey } from "@/lib/integrations-store";
 
@@ -27,10 +28,195 @@ function normalizeAnswerValue(value: unknown): string {
   }
 
   if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if (record.text || record.label || record.value || record.title || record.name) {
+      return String(
+        record.text ?? record.label ?? record.value ?? record.title ?? record.name ?? "",
+      ).trim();
+    }
+
     return JSON.stringify(value);
   }
 
   return String(value);
+}
+
+function sanitizeExternalFieldId(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function inferFieldType(record: Record<string, unknown>, normalizedValue: string): IntakeFormField["type"] {
+  const typeHint = String(record.type ?? record.questionType ?? record.fieldType ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    typeHint.includes("multiple_choice") ||
+    typeHint.includes("radio") ||
+    typeHint.includes("single_select")
+  ) {
+    return "multiple_choice";
+  }
+
+  if (typeHint.includes("checkbox")) {
+    return "checkbox";
+  }
+
+  if (typeHint.includes("dropdown") || typeHint.includes("select")) {
+    return "dropdown";
+  }
+
+  if (typeHint.includes("email")) {
+    return "email";
+  }
+
+  if (typeHint.includes("phone")) {
+    return "phone";
+  }
+
+  if (typeHint.includes("number")) {
+    return "number";
+  }
+
+  if (typeHint.includes("url") || typeHint.includes("link")) {
+    return "link";
+  }
+
+  if (typeHint.includes("date")) {
+    return "date";
+  }
+
+  if (typeHint.includes("time")) {
+    return "time";
+  }
+
+  if (typeHint.includes("textarea") || typeHint.includes("long")) {
+    return "paragraph";
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedValue)) {
+    return "email";
+  }
+
+  if (/^[+()\d\s-]{7,}$/.test(normalizedValue)) {
+    return "phone";
+  }
+
+  if (/^https?:\/\/.+/i.test(normalizedValue)) {
+    return "link";
+  }
+
+  if (!Number.isNaN(Number(normalizedValue)) && normalizedValue.trim()) {
+    return "number";
+  }
+
+  return normalizedValue.length > 80 ? "paragraph" : "short_text";
+}
+
+function buildTallyField(record: Record<string, unknown>, index: number): IntakeFormField | null {
+  const label = String(record.label ?? record.title ?? record.key ?? record.id ?? "").trim();
+
+  if (!label) {
+    return null;
+  }
+
+  const normalizedValue = normalizeTallyFieldValue(record);
+  const answerRecord =
+    record.answer && typeof record.answer === "object"
+      ? (record.answer as Record<string, unknown>)
+      : undefined;
+  const options = Array.isArray(record.options)
+    ? (record.options as Record<string, unknown>[])
+    : Array.isArray(answerRecord?.options)
+      ? (answerRecord?.options as Record<string, unknown>[])
+      : [];
+
+  const optionMap = Object.fromEntries(
+    options
+      .map((option) => {
+        const optionId = String(option.id ?? option.value ?? option.key ?? "").trim();
+        const optionLabel = String(
+          option.text ?? option.label ?? option.value ?? option.title ?? optionId,
+        ).trim();
+
+        if (!optionId || !optionLabel) {
+          return null;
+        }
+
+        return [optionId, optionLabel];
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry)),
+  );
+
+  return {
+    id: sanitizeExternalFieldId(label) || `field_${index + 1}`,
+    label,
+    type: inferFieldType(record, normalizedValue),
+    required: false,
+    options: Object.values(optionMap),
+    optionMap: Object.keys(optionMap).length > 0 ? optionMap : undefined,
+  };
+}
+
+function mapTallyOptionValue(
+  rawValue: unknown,
+  options: Record<string, unknown>[],
+) {
+  const optionMap = new Map<string, string>();
+
+  options.forEach((option) => {
+    const optionId = String(option.id ?? option.value ?? option.key ?? "").trim();
+    const optionLabel = String(
+      option.text ?? option.label ?? option.value ?? option.title ?? optionId,
+    ).trim();
+
+    if (optionId) {
+      optionMap.set(optionId, optionLabel || optionId);
+    }
+  });
+
+  if (Array.isArray(rawValue)) {
+    return rawValue
+      .map((item) => {
+        const normalized = normalizeAnswerValue(item).trim();
+        return optionMap.get(normalized) ?? normalized;
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  const normalized = normalizeAnswerValue(rawValue).trim();
+  return optionMap.get(normalized) ?? normalized;
+}
+
+function normalizeTallyFieldValue(record: Record<string, unknown>) {
+  const answerRecord =
+    record.answer && typeof record.answer === "object"
+      ? (record.answer as Record<string, unknown>)
+      : undefined;
+  const rawValue =
+    record.value ??
+    answerRecord?.value ??
+    answerRecord?.raw ??
+    answerRecord?.text ??
+    answerRecord?.label;
+
+  const options = Array.isArray(record.options)
+    ? (record.options as Record<string, unknown>[])
+    : Array.isArray(answerRecord?.options)
+      ? (answerRecord?.options as Record<string, unknown>[])
+      : [];
+
+  if (options.length > 0) {
+    return mapTallyOptionValue(rawValue, options);
+  }
+
+  return normalizeAnswerValue(rawValue);
 }
 
 function normalizeTallyPayload(body: Record<string, unknown>) {
@@ -50,24 +236,25 @@ function normalizeTallyPayload(body: Record<string, unknown>) {
         }
 
         const record = field as Record<string, unknown>;
-        const answerRecord =
-          record.answer && typeof record.answer === "object"
-            ? (record.answer as Record<string, unknown>)
-            : undefined;
         const label = String(record.label ?? record.title ?? record.key ?? record.id ?? "").trim();
-        const rawValue =
-          record.value ??
-          answerRecord?.value ??
-          answerRecord?.raw;
 
         if (!label) {
           return null;
         }
 
-        return [label, normalizeAnswerValue(rawValue)];
+        return [label, normalizeTallyFieldValue(record)];
       })
       .filter((entry): entry is [string, string] => Boolean(entry)),
   );
+  const fields = fields
+    .map((field, index) => {
+      if (!field || typeof field !== "object") {
+        return null;
+      }
+
+      return buildTallyField(field as Record<string, unknown>, index);
+    })
+    .filter((field): field is IntakeFormField => Boolean(field));
 
   return {
     source: "tally",
@@ -76,6 +263,7 @@ function normalizeTallyPayload(body: Record<string, unknown>) {
       title: String(data?.formName ?? body.formName ?? body.title ?? "Tally form").trim(),
       description: "Imported from Tally webhook",
       audience: "External leads",
+      fields,
     },
     response: {
       answers,
@@ -124,6 +312,7 @@ export async function POST(request: Request) {
       title?: string;
       description?: string;
       audience?: string;
+      fields?: IntakeFormField[];
     };
     response?: {
       answers?: Record<string, unknown>;
@@ -149,6 +338,7 @@ export async function POST(request: Request) {
     title,
     description: body.form?.description,
     audience: body.form?.audience,
+    fields: body.form?.fields,
     seedAnswers: normalizedAnswers,
   });
 

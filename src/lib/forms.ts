@@ -25,6 +25,7 @@ export type IntakeFormField = {
   type: FormFieldType;
   required: boolean;
   options?: string[];
+  optionMap?: Record<string, string>;
   condition?: FieldCondition;
   scaleMin?: number;
   scaleMax?: number;

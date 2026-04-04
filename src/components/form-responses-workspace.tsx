@@ -57,6 +57,7 @@ function toSavedField(field: EditorField): IntakeFormField {
           .map((item) => item.trim())
           .filter(Boolean)
       : undefined,
+    optionMap: field.optionMap,
     condition: field.condition,
     scaleMin: field.scaleMin,
     scaleMax: field.scaleMax,
@@ -91,6 +92,27 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
   const [item] = nextItems.splice(fromIndex, 1);
   nextItems.splice(toIndex, 0, item);
   return nextItems;
+}
+
+function formatFieldAnswerValue(field: IntakeFormField | undefined, rawValue: string) {
+  const trimmed = String(rawValue ?? "").trim();
+
+  if (!trimmed || !field) {
+    return trimmed;
+  }
+
+  const optionMap = field.optionMap ?? {};
+
+  if (Object.keys(optionMap).length === 0) {
+    return trimmed;
+  }
+
+  return trimmed
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => optionMap[item] ?? item)
+    .join(", ");
 }
 
 export function FormResponsesWorkspace({
@@ -1204,7 +1226,10 @@ export function FormResponsesWorkspace({
                         <td key={`${response.id}-${column.id}`} className={tableBodyCellClassName}>
                           {column.id === "submittedAt"
                             ? response.submittedAt
-                            : response.answers[column.id] || "-"}
+                            : formatFieldAnswerValue(
+                                selectedForm?.fields.find((field) => field.id === column.id),
+                                response.answers[column.id] || "",
+                              ) || "-"}
                         </td>
                       ))}
                     </tr>
